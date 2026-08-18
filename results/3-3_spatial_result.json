@@ -1,0 +1,338 @@
+[
+  {
+    "technique": "baseline",
+    "param": "no-filter",
+    "flat_noise_std_mm": 0.2506152391433716,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 1.7262304122703984,
+    "screw_diameter_error_mm": -6.273769587729602,
+    "proc_time_ms": 0.00017996256550153097
+  },
+  {
+    "technique": "realsense_spatial",
+    "param": "delta=5",
+    "flat_noise_std_mm": 0.12776413559913635,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 5.754101374234661,
+    "screw_diameter_error_mm": -2.2458986257653386,
+    "proc_time_ms": 3.6320467169086137
+  },
+  {
+    "technique": "realsense_spatial",
+    "param": "delta=15",
+    "flat_noise_std_mm": 0.12776413559913635,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 5.754101374234661,
+    "screw_diameter_error_mm": -2.2458986257653386,
+    "proc_time_ms": 3.5530466586351395
+  },
+  {
+    "technique": "realsense_spatial",
+    "param": "delta=25",
+    "flat_noise_std_mm": 0.12776413559913635,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 5.754101374234661,
+    "screw_diameter_error_mm": -2.2458986257653386,
+    "proc_time_ms": 3.4921066214640937
+  },
+  {
+    "technique": "realsense_spatial",
+    "param": "delta=35",
+    "flat_noise_std_mm": 0.12776413559913635,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 5.754101374234661,
+    "screw_diameter_error_mm": -2.2458986257653386,
+    "proc_time_ms": 3.522920049726963
+  },
+  {
+    "technique": "bilateral_depth",
+    "param": "sigma=5",
+    "flat_noise_std_mm": 0.2344355285167694,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 0.34100667883952457
+  },
+  {
+    "technique": "bilateral_depth",
+    "param": "sigma=15",
+    "flat_noise_std_mm": 0.2343626171350479,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 0.3384933186074098
+  },
+  {
+    "technique": "bilateral_depth",
+    "param": "sigma=25",
+    "flat_noise_std_mm": 0.2343544065952301,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 0.3211799698571364
+  },
+  {
+    "technique": "bilateral_depth",
+    "param": "sigma=35",
+    "flat_noise_std_mm": 0.23435674607753754,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 0.31423338999350864
+  },
+  {
+    "technique": "guided_rgb",
+    "param": "radius=4",
+    "flat_noise_std_mm": 1.7538981437683105,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 4.603281099387729,
+    "screw_diameter_error_mm": -3.396718900612271,
+    "proc_time_ms": 7.553980064888795
+  },
+  {
+    "technique": "guided_rgb",
+    "param": "radius=8",
+    "flat_noise_std_mm": 2.235032558441162,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 6.3295115116581275,
+    "screw_diameter_error_mm": -1.6704884883418725,
+    "proc_time_ms": 5.381346587091684
+  },
+  {
+    "technique": "guided_rgb",
+    "param": "radius=16",
+    "flat_noise_std_mm": 10.977248191833496,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 27.044276458902907,
+    "screw_diameter_error_mm": 19.044276458902907,
+    "proc_time_ms": 5.281099987526734
+  },
+  {
+    "technique": "nlm",
+    "param": "h=5",
+    "flat_noise_std_mm": 0.16889259219169617,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 132.69711999843517
+  },
+  {
+    "technique": "nlm",
+    "param": "h=10",
+    "flat_noise_std_mm": 0.16639651358127594,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 1.7262304122703984,
+    "screw_diameter_error_mm": -6.273769587729602,
+    "proc_time_ms": 130.62964662288627
+  },
+  {
+    "technique": "nlm",
+    "param": "h=20",
+    "flat_noise_std_mm": 0.16722868382930756,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 131.25394663463035
+  },
+  {
+    "technique": "median",
+    "param": "ksize=3",
+    "flat_noise_std_mm": 0.2484980970621109,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 3.452460824540797,
+    "screw_diameter_error_mm": -4.547539175459203,
+    "proc_time_ms": 5.598793334017198
+  },
+  {
+    "technique": "median",
+    "param": "ksize=5",
+    "flat_noise_std_mm": 0.23868243396282196,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 3.452460824540797,
+    "screw_diameter_error_mm": -4.547539175459203,
+    "proc_time_ms": 15.112480024496714
+  },
+  {
+    "technique": "median",
+    "param": "ksize=7",
+    "flat_noise_std_mm": 0.22978505492210388,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 3.452460824540797,
+    "screw_diameter_error_mm": -4.547539175459203,
+    "proc_time_ms": 29.653533392896254
+  },
+  {
+    "technique": "anisotropic",
+    "param": "iter=5",
+    "flat_noise_std_mm": 0.23189669847488403,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 14.168033345292011
+  },
+  {
+    "technique": "anisotropic",
+    "param": "iter=15",
+    "flat_noise_std_mm": 0.2250887006521225,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 35.93542001520594
+  },
+  {
+    "technique": "anisotropic",
+    "param": "iter=30",
+    "flat_noise_std_mm": 0.23508068919181824,
+    "flat_roi_center": [
+      60,
+      500
+    ],
+    "screw_center": [
+      146,
+      180
+    ],
+    "screw_diameter_est_mm": 2.3016405496938646,
+    "screw_diameter_error_mm": -5.698359450306135,
+    "proc_time_ms": 72.1292467477421
+  }
+]

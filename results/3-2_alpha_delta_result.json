@@ -1,0 +1,97 @@
+{
+  "results": [
+    {
+      "alpha": 0.25,
+      "delta": 5,
+      "flat_noise_std_mm": 0.4129907190799713,
+      "edge_transition_width_mm": null,
+      "score": 0.49640671306266165
+    },
+    {
+      "alpha": 0.25,
+      "delta": 20,
+      "flat_noise_std_mm": 0.4129907190799713,
+      "edge_transition_width_mm": null,
+      "score": 0.49640671306266165
+    },
+    {
+      "alpha": 0.25,
+      "delta": 40,
+      "flat_noise_std_mm": 0.4129907190799713,
+      "edge_transition_width_mm": null,
+      "score": 0.49640671306266165
+    },
+    {
+      "alpha": 0.5,
+      "delta": 5,
+      "flat_noise_std_mm": 0.7707316875457764,
+      "edge_transition_width_mm": null,
+      "score": 1.0
+    },
+    {
+      "alpha": 0.5,
+      "delta": 20,
+      "flat_noise_std_mm": 0.7707316875457764,
+      "edge_transition_width_mm": null,
+      "score": 1.0
+    },
+    {
+      "alpha": 0.5,
+      "delta": 40,
+      "flat_noise_std_mm": 0.7707316875457764,
+      "edge_transition_width_mm": null,
+      "score": 1.0
+    },
+    {
+      "alpha": 0.75,
+      "delta": 5,
+      "flat_noise_std_mm": 0.06035492569208145,
+      "edge_transition_width_mm": null,
+      "score": 0.0
+    },
+    {
+      "alpha": 0.75,
+      "delta": 20,
+      "flat_noise_std_mm": 0.06035492569208145,
+      "edge_transition_width_mm": null,
+      "score": 0.0
+    },
+    {
+      "alpha": 0.75,
+      "delta": 40,
+      "flat_noise_std_mm": 0.06035492569208145,
+      "edge_transition_width_mm": null,
+      "score": 0.0
+    },
+    {
+      "alpha": 1.0,
+      "delta": 5,
+      "flat_noise_std_mm": 0.06035492569208145,
+      "edge_transition_width_mm": null,
+      "score": 0.0
+    },
+    {
+      "alpha": 1.0,
+      "delta": 20,
+      "flat_noise_std_mm": 0.06035492569208145,
+      "edge_transition_width_mm": null,
+      "score": 0.0
+    },
+    {
+      "alpha": 1.0,
+      "delta": 40,
+      "flat_noise_std_mm": 0.06035492569208145,
+      "edge_transition_width_mm": null,
+      "score": 0.0
+    }
+  ],
+  "optimal": {
+    "alpha": 0.75,
+    "delta": 5,
+    "flat_noise_std_mm": 0.06035492569208145,
+    "edge_transition_width_mm": null,
+    "score": 0.0
+  },
+  "edge_measurement_available": false,
+  "note": "나사머리 영역이 반사성 금속이라 depth 센서 홀(무효값)이 생겨 엣지 전환폭 측정 불가 -> 평탄면 노이즈만으로 optimal 산정"
+}

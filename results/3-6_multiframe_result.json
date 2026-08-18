@@ -1,0 +1,47 @@
+{
+  "results": [
+    {
+      "N": 5,
+      "within_tol_pct": 97.20951426228014,
+      "flat_noise_std_mm": 0.10196485370397568,
+      "capture_time_s": 0.16666666666666666,
+      "total_time_s": 0.20787906662250558
+    },
+    {
+      "N": 10,
+      "within_tol_pct": 97.30935199622874,
+      "flat_noise_std_mm": 0.11732791364192963,
+      "capture_time_s": 0.3333333333333333,
+      "total_time_s": 0.410988533248504
+    },
+    {
+      "N": 15,
+      "within_tol_pct": 97.92044383204002,
+      "flat_noise_std_mm": 0.11003712564706802,
+      "capture_time_s": 0.5,
+      "total_time_s": 0.614079000428319
+    },
+    {
+      "N": 20,
+      "within_tol_pct": 98.0953586803169,
+      "flat_noise_std_mm": 0.10196485370397568,
+      "capture_time_s": 0.6666666666666666,
+      "total_time_s": 0.821906267820547
+    },
+    {
+      "N": 30,
+      "within_tol_pct": 98.3856130161078,
+      "flat_noise_std_mm": 0.0932440459728241,
+      "capture_time_s": 1.0,
+      "total_time_s": 1.232789102010429
+    },
+    {
+      "N": 50,
+      "within_tol_pct": 99.2289899768697,
+      "flat_noise_std_mm": 5.390214443206787,
+      "capture_time_s": 1.6666666666666667,
+      "total_time_s": 2.0473937682497008
+    }
+  ],
+  "note": "ground truth는 캘리퍼 미확보로 60장 median 합성을 근사 기준으로 사용 (절대 정확도 아님)"
+}

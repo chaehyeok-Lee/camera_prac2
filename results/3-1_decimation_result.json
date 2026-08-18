@@ -1,0 +1,146 @@
+[
+  {
+    "resolution": "640x480",
+    "magnitude": 1,
+    "noise_std_mm": 0.16661997536818188,
+    "mean_depth_mm": 247.94735107421874,
+    "roi_center": [
+      218,
+      130
+    ],
+    "screw_pixel_count": 12.552188877751986,
+    "proc_time_ms": 1.6819066057602565
+  },
+  {
+    "resolution": "640x480",
+    "magnitude": 2,
+    "noise_std_mm": 0.27338912983735403,
+    "mean_depth_mm": 247.96268615722656,
+    "roi_center": [
+      165,
+      117
+    ],
+    "screw_pixel_count": 6.275706298100956,
+    "proc_time_ms": 2.1105200362702212
+  },
+  {
+    "resolution": "640x480",
+    "magnitude": 3,
+    "noise_std_mm": 0.5265945533911387,
+    "mean_depth_mm": 242.03468627929686,
+    "roi_center": [
+      125,
+      45
+    ],
+    "screw_pixel_count": 4.286275591784061,
+    "proc_time_ms": 1.4703134074807167
+  },
+  {
+    "resolution": "640x480",
+    "magnitude": 4,
+    "noise_std_mm": 1.0038854638735453,
+    "mean_depth_mm": 248.79999898274738,
+    "roi_center": [
+      45,
+      29
+    ],
+    "screw_pixel_count": 3.127293001554324,
+    "proc_time_ms": 1.9622800561288993
+  },
+  {
+    "resolution": "848x480",
+    "magnitude": 1,
+    "noise_std_mm": 0.21207340161005656,
+    "mean_depth_mm": 251.00549926757813,
+    "roi_center": [
+      378,
+      434
+    ],
+    "screw_pixel_count": 13.690847560596186,
+    "proc_time_ms": 0.5935866385698318
+  },
+  {
+    "resolution": "848x480",
+    "magnitude": 2,
+    "noise_std_mm": 0.18314494689305624,
+    "mean_depth_mm": 246.06200052897137,
+    "roi_center": [
+      221,
+      197
+    ],
+    "screw_pixel_count": 6.982951491811387,
+    "proc_time_ms": 2.1945799390474954
+  },
+  {
+    "resolution": "848x480",
+    "magnitude": 3,
+    "noise_std_mm": 0.2648586402336756,
+    "mean_depth_mm": 246.07933451334637,
+    "roi_center": [
+      77,
+      53
+    ],
+    "screw_pixel_count": 4.6549730721866975,
+    "proc_time_ms": 2.467186593761047
+  },
+  {
+    "resolution": "848x480",
+    "magnitude": 4,
+    "noise_std_mm": 0.5238629678885142,
+    "mean_depth_mm": 243.0153544108073,
+    "roi_center": [
+      85,
+      53
+    ],
+    "screw_pixel_count": 3.5352478402810377,
+    "proc_time_ms": 3.02341990172863
+  },
+  {
+    "resolution": "1280x720",
+    "magnitude": 1,
+    "noise_std_mm": 0.30856578052043915,
+    "mean_depth_mm": 267.1616678873698,
+    "roi_center": [
+      202,
+      874
+    ],
+    "screw_pixel_count": 19.415722172152318,
+    "proc_time_ms": 1.6630734006563823
+  },
+  {
+    "resolution": "1280x720",
+    "magnitude": 2,
+    "noise_std_mm": 0.31025827328364053,
+    "mean_depth_mm": 265.1073445638021,
+    "roi_center": [
+      141,
+      437
+    ],
+    "screw_pixel_count": 9.783087540039158,
+    "proc_time_ms": 2.964520019789537
+  },
+  {
+    "resolution": "1280x720",
+    "magnitude": 3,
+    "noise_std_mm": 0.3935703178246816,
+    "mean_depth_mm": 263.1233317057292,
+    "roi_center": [
+      117,
+      293
+    ],
+    "screw_pixel_count": 6.571236085442568,
+    "proc_time_ms": 2.5291134292880693
+  },
+  {
+    "resolution": "1280x720",
+    "magnitude": 4,
+    "noise_std_mm": 0.44694533944129944,
+    "mean_depth_mm": 263.2792622884115,
+    "roi_center": [
+      85,
+      221
+    ],
+    "screw_pixel_count": 4.9255082546795,
+    "proc_time_ms": 1.8817466062804062
+  }
+]
