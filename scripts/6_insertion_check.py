@@ -115,7 +115,8 @@ def main():
     filters = build_filters()
 
     try:
-        fx = _px_to_mm.get_color_fx(pipeline)
+        intr = _px_to_mm.get_color_intrinsics(pipeline)
+        fx = intr["fx"]
         depth_mm, color_img = capture_averaged_depth(pipeline, align, filters, depth_scale, n_frames=30)
     finally:
         pipeline.stop()
@@ -124,7 +125,7 @@ def main():
 
     screw_dets = _px_to_mm.detect_screw_heads_by_color(color_img)
     print(f"screw_head 후보: {len(screw_dets)}개")
-    stud_holes = _px_to_mm.detect_stud_holes(color_img, depth_mm, fx)
+    stud_holes = _px_to_mm.detect_stud_holes(color_img, depth_mm, intr)
     print(f"stud_hole 검출: {len(stud_holes)}개")
 
     baseline = load_baseline()

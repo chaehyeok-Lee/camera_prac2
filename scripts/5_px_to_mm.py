@@ -26,6 +26,8 @@ N_FRAMES = 30
 # stud_hole만 YOLO confidence threshold 적용 대상 (screw_head는 색상 기반 검출이라 conf 개념 없음).
 # 0.35는 실측 confidence 분포 확인 결과 과했음(0.26~0.36 구간에 진짜 구멍이 더 있고
 # 노이즈는 0.10 밑으로 뚝 떨어짐 - 실제 경계는 0.28 근처). 0.35->0.28로 낮춤.
+# 이후 4-2 실험에서 0.28도 재현율이 낮다고 판단해 실제 검출은 STUD_HOLE_CONF(0.15)로 교체함 -
+# 여기 0.28은 4-2 실험 스크립트가 "기존 방식"과 비교하는 baseline 값으로만 남겨둠(운영 미사용).
 CONF_THRESHOLD_BY_CLASS = {"stud_hole": 0.28}
 # 시편은 카메라에서 약 250mm(confirm.md 측정거리) 거리 - 이 범위를 벗어나면 배경(벽/모니터/케이블)으로 간주해 제외.
 # color 기반 screw_head 검출기가 폼 패널 틈새로 보이는 먼 배경(흰 벽)을 나사로 오탐하는 게
@@ -37,6 +39,15 @@ def get_color_fx(pipeline):
     profile = pipeline.get_active_profile()
     color_stream = profile.get_stream(rs.stream.color).as_video_stream_profile()
     return color_stream.get_intrinsics().fx
+
+
+def get_color_intrinsics(pipeline):
+    """fx/fy/ppx(주점)/ppy를 dict로 반환. 실측 확인: 이 색상 스트림은 왜곡계수(coeffs)가
+    전부 0 - 즉 렌즈 왜곡은 없고, 핀홀 모델 그대로 써도 됨(아래 평면 피팅/호모그래피 보정에서
+    rs2_deproject 대신 간단한 벡터화된 핀홀 역투영식을 쓰는 근거)."""
+    profile = pipeline.get_active_profile()
+    intr = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+    return {"fx": intr.fx, "fy": intr.fy, "ppx": intr.ppx, "ppy": intr.ppy}
 
 
 def mask_diameter_px(mask_bool):
@@ -203,13 +214,165 @@ def build_instance(mask_bool, cls_name, conf, depth_mm, fx, debug_label=None, **
 _MODEL_CACHE = {}
 
 
-def detect_stud_holes(color_img, depth_mm, fx, debug_label="stud_hole"):
-    """YOLO-seg로 stud_hole 검출 -> build_instance 리스트. 5번 main()/6번 공용 (중복 제거용 추출)."""
+STUD_HOLE_CONF = 0.15  # 4-2 실험(scripts/4-2_hole_detection_experiments.py)에서 재현율이
+# 뚜렷이 좋아짐(9->12개, 같은 프레임에서 오탐 없이 확인) - 정확도는 아래 평면보정으로 별도 확보
+PLANE_FIT_SAMPLE_STEP = 8   # 전체 프레임에서 이 간격으로만 샘플링해 평면 피팅(속도 위해 서브샘플)
+PLANE_FIT_MIN_POINTS = 200
+CIRCLE_FIT_MIN_POINTS = 8       # 원 피팅에 필요한 최소 윤곽점 수(부족하면 피팅이 불안정)
+CIRCLE_FIT_MIN_COVERAGE = 0.55  # 원 둘레의 이 비율(각도 기준) 이상 보여야 피팅을 신뢰
+# (합성 마스크로 검증: coverage=0.61은 중심오차 1.3px, coverage=0.43은 5.6px까지 벌어짐 확인)
+CIRCLE_FIT_MAX_RESIDUAL_PX = 2.5  # 피팅된 원에서 점들이 이 이상 벗어나면 원이 아닌 노이즈로 판단
+
+
+def fit_panel_plane_3d(depth_mm, intr, sample_step=PLANE_FIT_SAMPLE_STEP):
+    """depth 프레임 전체에서 패널의 3D 평면(카메라 좌표계, aX+bY+cZ=1)을 최소자승으로 피팅.
+    왜곡계수가 0으로 확인됐으므로(get_color_intrinsics 참고) rs2_deproject 대신 벡터화된
+    핀홀 역투영식(X=(u-ppx)Z/fx, Y=(v-ppy)Z/fy)을 직접 씀 - numpy로 한 번에 처리돼 빠름.
+    반환: (단위법선벡터 n(3,), 평면까지 수직거리 d0[mm]). 유효 표본 부족하면 (None, None)."""
+    h, w = depth_mm.shape
+    us = np.arange(0, w, sample_step)
+    vs = np.arange(0, h, sample_step)
+    grid_u, grid_v = np.meshgrid(us, vs)
+    Z = depth_mm[grid_v, grid_u].astype(np.float64)
+    valid = Z > 0
+    if valid.sum() < PLANE_FIT_MIN_POINTS:
+        return None, None
+
+    U, V, Z = grid_u[valid].astype(np.float64), grid_v[valid].astype(np.float64), Z[valid]
+    X = (U - intr["ppx"]) * Z / intr["fx"]
+    Y = (V - intr["ppy"]) * Z / intr["fy"]
+
+    A = np.column_stack([X, Y, Z])
+    b = np.ones_like(X)
+    sol, *_ = np.linalg.lstsq(A, b, rcond=None)
+    norm = np.linalg.norm(sol)
+    if norm < 1e-12:
+        return None, None
+    n = sol / norm
+    d0 = 1.0 / norm
+    return n, float(d0)
+
+
+def build_rectification_homography(intr, normal):
+    """패널 법선(normal)이 광축(0,0,1)과 나란해지도록 카메라를 제자리에서 회전시키는 것과
+    동등한 호모그래피 H = K R K^-1 을 구성. 광학중심은 그대로 두고 시선 방향만 돌리는
+    것이므로 평행이동 항 없이 회전만으로 충분(표준 fronto-parallel 정류 공식).
+    H는 원본 이미지 좌표 -> '정면에서 본 것처럼' 보정된 가상 이미지 좌표로 매핑."""
+    fx, fy, ppx, ppy = intr["fx"], intr["fy"], intr["ppx"], intr["ppy"]
+    K = np.array([[fx, 0, ppx], [0, fy, ppy], [0, 0, 1]], dtype=np.float64)
+    target = np.array([0.0, 0.0, 1.0])
+    n = normal / np.linalg.norm(normal)
+    axis = np.cross(n, target)
+    axis_norm = np.linalg.norm(axis)
+    if axis_norm < 1e-8:
+        R = np.eye(3)
+    else:
+        axis = axis / axis_norm
+        angle = np.arccos(np.clip(np.dot(n, target), -1.0, 1.0))
+        R, _ = cv2.Rodrigues(axis * angle)
+    H = K @ R @ np.linalg.inv(K)
+    return H
+
+
+def _fit_circle_lstsq(x, y):
+    """점들에 최소자승으로 원 피팅 (x^2+y^2=2ax+2by+c 선형화). (cx,cy,r) 또는 실패 시 None."""
+    A = np.column_stack([x, y, np.ones_like(x)])
+    b = x ** 2 + y ** 2
+    sol, *_ = np.linalg.lstsq(A, b, rcond=None)
+    a_coef, b_coef, c_coef = sol
+    cx, cy = a_coef / 2, b_coef / 2
+    r_sq = c_coef + cx ** 2 + cy ** 2
+    if not np.isfinite(r_sq) or r_sq <= 0:
+        return None
+    return cx, cy, np.sqrt(r_sq)
+
+
+def rectify_and_fit_circle(mask_bool, H, fx, d0, border_margin=3,
+                            min_points=CIRCLE_FIT_MIN_POINTS, min_coverage=CIRCLE_FIT_MIN_COVERAGE,
+                            max_residual_px=CIRCLE_FIT_MAX_RESIDUAL_PX):
+    """마스크 윤곽선을 호모그래피 H로 '정면에서 본' 좌표계로 변환한 뒤 그 좌표계에서 원을
+    피팅 - 가장자리에 잘렸든 안 잘렸든, 이미지 중심에서 멀든 가깝든 항상 같은 방식(연속적)으로
+    처리됨 - '잘렸으면 A, 안 잘렸으면 B'식 이진분기 없음.
+
+    이미지 경계에 붙은 점(절단면)은 원의 일부가 아니므로 호모그래피 변환 전에 미리 제외.
+    반환값: dict(center_px(원본좌표), diameter_px, diameter_mm, rect_residual_px, rect_coverage,
+    rect_n_points) 또는 신뢰 불가 시 None. diameter_mm은 보정된 반지름과 평면의 수직거리 d0로
+    계산(보정된 가상 카메라는 패널과 정면으로 마주보므로 단순 핀홀식 그대로 적용 가능)."""
+    h, w = mask_bool.shape
+    contours, _ = cv2.findContours(mask_bool.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if not contours:
+        return None
+    cnt = max(contours, key=cv2.contourArea).reshape(-1, 2).astype(np.float64)
+
+    on_border = (
+        (cnt[:, 0] <= border_margin) | (cnt[:, 0] >= w - 1 - border_margin) |
+        (cnt[:, 1] <= border_margin) | (cnt[:, 1] >= h - 1 - border_margin)
+    )
+    pts = cnt[~on_border]
+    if len(pts) < min_points:
+        return None
+
+    pts_rect = cv2.perspectiveTransform(pts.reshape(-1, 1, 2), H).reshape(-1, 2)
+    x, y = pts_rect[:, 0], pts_rect[:, 1]
+
+    fit = _fit_circle_lstsq(x, y)
+    if fit is None:
+        return None
+    cx, cy, r = fit
+
+    dist = np.hypot(x - cx, y - cy)
+    residual = float(np.sqrt(np.mean((dist - r) ** 2)))
+    if residual > max_residual_px:
+        return None
+
+    angles = np.sort(np.arctan2(y - cy, x - cx))
+    gaps = np.diff(np.concatenate([angles, angles[:1] + 2 * np.pi]))
+    coverage = 1 - gaps.max() / (2 * np.pi)
+    if coverage < min_coverage:
+        return None
+
+    # 보정된 좌표계 중심을 다시 원본 이미지 좌표로 되돌림 (시각화/거리매칭은 원본 좌표 기준)
+    Hinv = np.linalg.inv(H)
+    center_orig = cv2.perspectiveTransform(np.array([[[cx, cy]]], dtype=np.float64), Hinv)[0, 0]
+
+    diam_mm = 2 * r * d0 / fx
+    return {
+        "center_px": [round(float(center_orig[0]), 1), round(float(center_orig[1]), 1)],
+        "diameter_px": round(float(2 * r), 2),
+        "diameter_mm": round(float(diam_mm), 3),
+        "rect_residual_px": round(residual, 2),
+        "rect_coverage": round(float(coverage), 2),
+        "rect_n_points": int(len(pts)),
+    }
+
+
+def detect_stud_holes(color_img, depth_mm, intr, debug_label="stud_hole"):
+    """YOLO-seg로 stud_hole 검출 -> build_instance 리스트. 5번 main()/6번 공용 (중복 제거용 추출).
+    intr: get_color_intrinsics()가 반환하는 dict({fx,fy,ppx,ppy}).
+
+    conf=0.15(원래 0.28보다 낮음)로 재현율을 올림 (4-2 실험: 같은 프레임 기준 9->12개, 오탐
+    증가는 육안상 없었음).
+
+    측정 정확도는 원형도(circularity) 필터가 아니라 평면-호모그래피 보정 + 원 피팅으로 확보:
+    패널이 카메라에 대해 기울어져 있어 광축(이미지 중심)에서 멀어질수록 원이 타원으로 찌그러져
+    보이는 문제(렌즈 왜곡 아님 - 실측 확인함, get_color_intrinsics 참고)를 depth로 패널의 3D
+    평면을 매 프레임 새로 피팅해 보정한다. 이미지 가장자리에 살짝 잘린 구멍도 같은 파이프라인
+    으로 처리됨(별도 분기 없음) - 잘림 정도가 심해 피팅이 불안정해지는 경우만
+    rectify_and_fit_circle 내부에서 자동으로 거름."""
     if "model" not in _MODEL_CACHE:
         _MODEL_CACHE["model"] = YOLO(MODEL_PATH)
     model = _MODEL_CACHE["model"]
     h_img, w_img = depth_mm.shape
-    results = model.predict(color_img, conf=CONF_THRESHOLD_BY_CLASS["stud_hole"], iou=0.5, verbose=False)
+    fx = intr["fx"]
+
+    normal, d0 = fit_panel_plane_3d(depth_mm, intr)
+    if normal is None:
+        if debug_label:
+            print(f"  [{debug_label}] 경고: 패널 평면 피팅 실패(유효 depth 부족) - stud_hole 검출 건너뜀")
+        return []
+    H = build_rectification_homography(intr, normal)
+
+    results = model.predict(color_img, conf=STUD_HOLE_CONF, iou=0.5, verbose=False)
     r = results[0]
     instances = []
     if r.masks is not None:
@@ -220,9 +383,29 @@ def detect_stud_holes(color_img, depth_mm, fx, debug_label="stud_hole"):
             conf = r.boxes.conf[i].item()
             mask = r.masks.data[i].cpu().numpy()
             mask_resized = cv2.resize(mask, (w_img, h_img), interpolation=cv2.INTER_NEAREST) > 0.5
+
+            fitted = rectify_and_fit_circle(mask_resized, H, fx, d0)
+            if fitted is None:
+                if debug_label:
+                    print(f"  [{debug_label}] 제외: 원 피팅 신뢰불가 (노이즈/과도한 잘림)")
+                continue
+
             inst = build_instance(mask_resized, cls_name, conf, depth_mm, fx, debug_label=debug_label)
-            if inst:
-                instances.append(inst)
+            if inst is None:
+                continue
+            # 마스크/원본 기반 값(중심/지름/mm)을 평면보정 기반 값으로 덮어씀 - depth 유효성
+            # 검사, ground_truth 오차 계산 등 build_instance의 나머지 로직은 그대로 재사용.
+            inst["center_px"] = fitted["center_px"]
+            inst["diameter_px"] = fitted["diameter_px"]
+            diam_mm = fitted["diameter_mm"]
+            inst["diameter_mm"] = diam_mm
+            gt = GROUND_TRUTH_MM.get(cls_name)
+            if gt is not None:
+                inst["error_mm"] = round(diam_mm - gt, 3)
+                inst["error_pct"] = round((diam_mm - gt) / gt * 100, 1)
+            inst["rect_residual_px"] = fitted["rect_residual_px"]
+            inst["rect_coverage"] = fitted["rect_coverage"]
+            instances.append(inst)
     return instances
 
 
@@ -231,7 +414,8 @@ def main():
     filters = build_filters()
 
     try:
-        fx = get_color_fx(pipeline)
+        intr = get_color_intrinsics(pipeline)
+        fx = intr["fx"]
         depth_mm, color_img = capture_averaged_depth(pipeline, align, filters, depth_scale, n_frames=N_FRAMES)
     finally:
         pipeline.stop()
@@ -241,7 +425,7 @@ def main():
     instances = []
 
     # stud_hole: YOLO 세그멘테이션 (기존 방식 유지 - 배경과 구분이 어려워 학습 기반이 필요)
-    instances.extend(detect_stud_holes(color_img, depth_mm, fx))
+    instances.extend(detect_stud_holes(color_img, depth_mm, intr))
 
     # screw_head: 색상(명도) 기반 고전 CV - 은색 나사 vs 무광 검은 배경 대비가 커서 학습 불필요.
     # 타원으로 보이는(기울어진) 나사는 6번 '틀어짐' 케이스로 별도 표시 (버리지 않음).
