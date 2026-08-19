@@ -23,10 +23,15 @@
 import os
 import sys
 import time
+import json
+import argparse
 from enum import Enum, auto
+from functools import partial
 
 import numpy as np
 import cv2
+
+print = partial(print, flush=True)  # 원격/백그라운드 실행 시 버퍼링으로 로그 유실 방지
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from depth_preprocessing import build_pipeline, build_filters, apply_filters, capture_averaged_depth  # noqa: E402
@@ -41,12 +46,22 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # --- 시작값 (실카메라 튜닝 전) -----------------------------------------------
 ROI_FRACTION = 0.7          # 화면 중앙 이 비율만 모션 판정에 사용 (배경 흔들림 무시)
-MOTION_DIFF_THRESHOLD_MM = 5.0
+# 실측(calibrate_motion_threshold.py, 원격이라 시편을 못 움직인 채 측정 - 두 단계가 사실상 다
+# 정지 상태였음): 완전 정지 시 센서 노이즈 diff가 최대 0.16mm(평균 0.12mm)로 확인됨.
+# max-gap 산출값(0.07mm)은 두 단계가 실제로는 구분 안 돼서 폐기 - 대신 노이즈 상한(0.16mm)에
+# 3배 이상 여유를 둔 값을 잠정 사용. 진짜 움직임 vs 정지 비교는 시편을 물리적으로 움직일 수
+# 있을 때 calibrate_motion_threshold.py 재실행해서 갱신할 것.
+MOTION_DIFF_THRESHOLD_MM = 0.5
 SETTLE_FRAMES = 15          # ~0.5초 @ 30fps 연속 정지 확인
 DEBOUNCE_FRAMES = 15        # RESULT_SHOWN에서 재트리거되려면 이만큼 연속으로 모션 감지돼야 함
 MEASURE_N_FRAMES_FAST = 15
 MEASURE_N_FRAMES_FALLBACK = 30
 STUD_HOLE_COUNT_TOLERANCE = 1  # 두 버스트 stud_hole 개수 차이가 이 이하면 "일치"로 간주
+# MEASURING(capture_averaged_depth, 자체 프레임 루프)에서 RESULT_SHOWN(grab_filtered_depth_mm,
+# 다른 호출 패턴)으로 돌아올 때 같은 temporal filter 객체의 내부 상태가 순간적으로 흔들려
+# 첫 diff가 과대하게 나올 수 있음(실측으로 재측정 루프가 도는 게 확인돼 추가) - 복귀 후
+# 이 프레임 수만큼은 diff를 구해도 debounce 카운터에 반영하지 않고 버림(필터 재안정화 유예).
+POST_MEASURE_COOLDOWN_FRAMES = 20
 
 
 class State(Enum):
@@ -128,6 +143,12 @@ def render_result(color_img, results, stud_holes, status_text=None):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--once", action="store_true",
+                         help="첫 측정 완료(RESULT_SHOWN 진입) 즉시 결과 저장 후 종료 - 원격/헤드리스 검증용"
+                              "(GUI 창에 q를 못 누르는 상황 대비)")
+    args = parser.parse_args()
+
     pipeline, align, depth_scale = build_pipeline()
     filters = build_filters()
     intr = dc.get_color_intrinsics(pipeline)
@@ -138,9 +159,10 @@ def main():
     prev_depth_mm = None
     settle_counter = 0
     debounce_counter = 0
+    cooldown_counter = 0
     result_vis = None
 
-    print("7번 실시간 검출 시작 - q로 종료")
+    print("7번 실시간 검출 시작 - q로 종료" + (" (--once: 첫 측정 후 자동 종료)" if args.once else ""))
     print(f"모션 임계값(시작값)={MOTION_DIFF_THRESHOLD_MM}mm, 정지확인={SETTLE_FRAMES}프레임")
 
     try:
@@ -192,8 +214,23 @@ def main():
                 cv2.imshow("realtime_detect", result_vis)
                 cv2.waitKey(1)
                 print(f"  결과: screw={len(results)}개, stud_hole={len(stud_holes)}개, {elapsed:.2f}초")
+
+                json_path = os.path.join(RESULTS_DIR, "7_realtime_result.json")
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump({"screw_results": results, "stud_holes": stud_holes,
+                               "consistent_fast_pass": consistent, "elapsed_sec": round(elapsed, 2)},
+                              f, ensure_ascii=False, indent=2)
+                png_path = os.path.join(RESULTS_DIR, "7_realtime_result.png")
+                cv2.imwrite(png_path, result_vis)
+                print(f"  결과 저장: {json_path}, {png_path}")
+
+                if args.once:
+                    print("--once 지정됨 - 종료")
+                    break
+
                 state = State.RESULT_SHOWN
                 prev_depth_mm = None  # 재개 시 첫 프레임은 diff 기준 없음(999로 시작)
+                cooldown_counter = POST_MEASURE_COOLDOWN_FRAMES  # MEASURING 직후 temporal filter 재안정화 유예
 
             elif state == State.RESULT_SHOWN:
                 cv2.imshow("realtime_detect", result_vis)
@@ -203,7 +240,9 @@ def main():
                     roi, prev_roi = depth_mm[ry, rx], prev_depth_mm[ry, rx]
                     valid = (roi > 0) & (prev_roi > 0)
                     diff = float(np.mean(np.abs(roi[valid] - prev_roi[valid]))) if valid.sum() else 0.0
-                    if diff >= MOTION_DIFF_THRESHOLD_MM:
+                    if cooldown_counter > 0:
+                        cooldown_counter -= 1  # 재안정화 유예 구간 - diff는 구하되 판정엔 반영 안 함
+                    elif diff >= MOTION_DIFF_THRESHOLD_MM:
                         debounce_counter += 1
                     else:
                         debounce_counter = 0
