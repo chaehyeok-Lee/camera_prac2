@@ -96,15 +96,25 @@ def run_measurement(pipeline, align, filters, depth_scale, intr, baseline):
     """정지 확정 시 실행되는 검증된 파이프라인. 15프레임 버스트 두 번을 비교해 자기검증
     (A의 제안: 노이즈로 인한 단발성 오검출을 잡아냄 - 방법 자체의 체계적 오류는 못 잡지만,
     실시간이라 이 정도 이중확인은 거의 공짜로 됨). 불일치 시 검증된 30프레임 설정으로 재시도."""
-    def one_pass(n_frames):
-        depth_mm, color_img = capture_averaged_depth(pipeline, align, filters, depth_scale, n_frames=n_frames)
+    def one_pass(n_frames, warmup):
+        # capture_averaged_depth 기본 warmup=10은 정적 스크립트(pipeline.start() 직후 콜드스타트)
+        # 기준 - 실시간은 WAITING/SETTLING 내내 스트리밍 중이라 노출/필터가 이미 안정 상태.
+        # 이 사이클의 첫 버스트만 시편 교체 직후 노출 재적응을 위해 소량 워밍업을 두고,
+        # 같은 사이클의 재측정 버스트는 워밍업 생략(3회 x 10프레임=1초 가까이 절약됨).
+        t_capture0 = time.time()
+        depth_mm, color_img = capture_averaged_depth(
+            pipeline, align, filters, depth_scale, n_frames=n_frames, warmup=warmup)
+        t_capture = time.time() - t_capture0
         fx = intr["fx"]
+        t_det0 = time.time()
         screw_dets = dc.detect_screw_heads_by_color(color_img)
         stud_holes = dc.detect_stud_holes(color_img, depth_mm, intr)
+        t_det = time.time() - t_det0
+        print(f"    [측정] n_frames={n_frames} warmup={warmup} -> capture={t_capture:.2f}s detect={t_det:.2f}s")
         return depth_mm, color_img, fx, screw_dets, stud_holes
 
-    depth_mm, color_img, fx, screw_dets, stud_holes = one_pass(MEASURE_N_FRAMES_FAST)
-    depth_mm2, color_img2, fx2, screw_dets2, stud_holes2 = one_pass(MEASURE_N_FRAMES_FAST)
+    depth_mm, color_img, fx, screw_dets, stud_holes = one_pass(MEASURE_N_FRAMES_FAST, warmup=3)
+    depth_mm2, color_img2, fx2, screw_dets2, stud_holes2 = one_pass(MEASURE_N_FRAMES_FAST, warmup=0)
 
     consistent = (
         abs(len(stud_holes) - len(stud_holes2)) <= STUD_HOLE_COUNT_TOLERANCE
@@ -113,7 +123,7 @@ def run_measurement(pipeline, align, filters, depth_scale, intr, baseline):
     if not consistent:
         print(f"  두 버스트 불일치 (stud={len(stud_holes)}/{len(stud_holes2)}, "
               f"screw={len(screw_dets)}/{len(screw_dets2)}) - 30프레임으로 재측정")
-        depth_mm, color_img, fx, screw_dets, stud_holes = one_pass(MEASURE_N_FRAMES_FALLBACK)
+        depth_mm, color_img, fx, screw_dets, stud_holes = one_pass(MEASURE_N_FRAMES_FALLBACK, warmup=0)
 
     results, baseline, threshold = insertion.classify_insertion(
         screw_dets, stud_holes, depth_mm, fx, baseline)
@@ -152,6 +162,13 @@ def main():
     pipeline, align, depth_scale = build_pipeline()
     filters = build_filters()
     intr = dc.get_color_intrinsics(pipeline)
+
+    # YOLO 모델 워밍업: 첫 실제 추론에 초기화 비용(~1.7초, 실측)이 붙는 걸 확인함 - 이걸
+    # 최초 측정(사용자가 기다리는 순간) 대신 시작 시점(대기 상태 진입 전)으로 옮겨서 숨김.
+    print("모델 워밍업 중...")
+    t_warm = time.time()
+    dc.get_model().predict(np.zeros((720, 1280, 3), dtype=np.uint8), verbose=False)
+    print(f"  완료 ({time.time() - t_warm:.2f}s)")
 
     baseline = insertion.load_baseline()
 
