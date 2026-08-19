@@ -1,6 +1,6 @@
 """
 6번: 삽입 불량 판단 - 정상/덜박힘/틀어짐 3분류
-- 틀어짐(각도): 5_px_to_mm.py의 detect_screw_heads_by_color가 이미 판정 (여기서 재사용)
+- 틀어짐(각도): detection_core.detect_screw_heads_by_color가 이미 판정 (여기서 재사용)
 - 틀어짐(중심좌표): 나사머리 중심 vs 매칭되는 stud_hole 중심 거리. 임계값은 통계 추정이 아니라
   기하학적 제약(스터드홀 반지름 - 나사머리 반지름) - 이 값을 넘으면 나사가 물리적으로 구멍
   안에 있을 수 없으므로 원리적으로 타당한 임계값.
@@ -10,6 +10,7 @@
   주의: 지금 가진 시편은 전부 정상 삽입(추정)이라 "진짜 덜박힘" 양성 샘플로 절대 임계값을
   검증하진 못함 - 정상 판정된 나사들의 protrusion_mm을 실행할 때마다 파일에 누적해 통계적
   이상치(평균+3표준편차)를 잠정 기준으로 쓰고, 표본이 부족하면 덜박힘 판정 자체를 보류한다.
+- 검출/mm환산/평면보정 로직은 scripts/detection_core.py로 분리(5/7번과 공용)
 """
 
 import os
@@ -20,9 +21,7 @@ import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from depth_preprocessing import build_pipeline, build_filters, capture_averaged_depth  # noqa: E402
-from importlib import import_module  # noqa: E402
-
-_px_to_mm = import_module("5_px_to_mm")  # 파일명이 숫자로 시작해 import 문으로 바로 못 씀
+import detection_core as dc  # noqa: E402
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS_DIR = os.path.join(_ROOT, "results")
@@ -42,7 +41,7 @@ BASELINE_STD_MULT = 3
 # 생기는 "허용 편심 반경" = (stud_hole_mm - screw_head_mm) / 2. 이보다 중심이 어긋나면
 # 나사가 물리적으로 구멍 벽에 닿아있다는 뜻이라, 캘리브레이션 없이도 타당한 임계값이 됨.
 CENTER_OFFSET_THRESHOLD_MM = (
-    _px_to_mm.GROUND_TRUTH_MM["stud_hole"] - _px_to_mm.GROUND_TRUTH_MM["screw_head"]
+    dc.GROUND_TRUTH_MM["stud_hole"] - dc.GROUND_TRUTH_MM["screw_head"]
 ) / 2
 
 # 실측 확인 결과: 제대로 삽입된 나사는 자기 구멍을 거의 다 가려서 그 구멍이 빈 stud_hole로
@@ -110,25 +109,10 @@ def save_baseline(values):
         json.dump(values, f, ensure_ascii=False, indent=2)
 
 
-def main():
-    pipeline, align, depth_scale = build_pipeline()
-    filters = build_filters()
-
-    try:
-        intr = _px_to_mm.get_color_intrinsics(pipeline)
-        fx = intr["fx"]
-        depth_mm, color_img = capture_averaged_depth(pipeline, align, filters, depth_scale, n_frames=30)
-    finally:
-        pipeline.stop()
-
-    print(f"캡처 완료. depth range={depth_mm[depth_mm>0].min()}~{depth_mm.max()}mm")
-
-    screw_dets = _px_to_mm.detect_screw_heads_by_color(color_img)
-    print(f"screw_head 후보: {len(screw_dets)}개")
-    stud_holes = _px_to_mm.detect_stud_holes(color_img, depth_mm, intr)
-    print(f"stud_hole 검출: {len(stud_holes)}개")
-
-    baseline = load_baseline()
+def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
+    """screw_dets(색상검출) + stud_holes(YOLO검출) + baseline(정상 protrusion 표본) ->
+    (results, baseline) - 5/6/7번 공용 삽입판정 코어. baseline은 정상 판정분이 append된
+    새 리스트로 반환(파일 저장은 호출자 책임 - 실시간 루프는 매 사이클 저장하지 않아도 되므로)."""
     protrusion_threshold = None
     if len(baseline) >= MIN_BASELINE_N:
         protrusion_threshold = float(np.mean(baseline) + BASELINE_STD_MULT * np.std(baseline))
@@ -137,8 +121,8 @@ def main():
     for idx, det in enumerate(screw_dets):
         label = f"screw#{idx}"
         mask = det["mask"]
-        inst = _px_to_mm.build_instance(mask, "screw_head", 1.0, depth_mm, fx, debug_label=label,
-                                         aspect_ratio=det["aspect_ratio"], tilt_status=det["status"])
+        inst = dc.build_instance(mask, "screw_head", 1.0, depth_mm, fx, debug_label=label,
+                                  aspect_ratio=det["aspect_ratio"], tilt_status=det["status"])
         if inst is None:
             continue
 
@@ -177,6 +161,7 @@ def main():
             statuses.append("덜박힘")
         inst["final_status"] = "/".join(statuses) if statuses else "정상"
         inst["tilt_reasons"] = reasons
+        inst["match_rejected"] = match_rejected
 
         # 정상 판정(틀어짐 없음)인 나사만 덜박힘 기준선 표본으로 누적 - 틀어짐 나사는
         # foreshortening 등으로 protrusion 계산 자체가 왜곡될 수 있어 기준선 오염 방지
@@ -184,9 +169,35 @@ def main():
             baseline.append(inst["protrusion_mm"])
 
         results.append(inst)
-        if center_offset_mm is not None:
+    return results, baseline, protrusion_threshold
+
+
+def main():
+    pipeline, align, depth_scale = build_pipeline()
+    filters = build_filters()
+
+    try:
+        intr = dc.get_color_intrinsics(pipeline)
+        fx = intr["fx"]
+        depth_mm, color_img = capture_averaged_depth(pipeline, align, filters, depth_scale, n_frames=30)
+    finally:
+        pipeline.stop()
+
+    print(f"캡처 완료. depth range={depth_mm[depth_mm>0].min()}~{depth_mm.max()}mm")
+
+    screw_dets = dc.detect_screw_heads_by_color(color_img)
+    print(f"screw_head 후보: {len(screw_dets)}개")
+    stud_holes = dc.detect_stud_holes(color_img, depth_mm, intr)
+    print(f"stud_hole 검출: {len(stud_holes)}개")
+
+    baseline = load_baseline()
+    results, baseline, protrusion_threshold = classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline)
+
+    for idx, inst in enumerate(results):
+        label = f"screw#{idx}"
+        if inst["center_offset_mm"] is not None:
             offset_str = f"{inst['center_offset_mm']}mm"
-        elif match_rejected:
+        elif inst["match_rejected"]:
             offset_str = "판정보류(가장 가까운 구멍도 너무 멀어 신뢰불가)"
         else:
             offset_str = "매칭없음(빈 구멍 미검출)"
@@ -207,8 +218,8 @@ def main():
         print(f"\n덜박힘 임계값 미확정 - 정상 표본 {len(baseline)}/{MIN_BASELINE_N}개 누적됨 "
               f"(계속 실행해 표본을 쌓으면 자동으로 확정됨)")
     print(f"틀어짐(중심) 임계값(기하 제약): {CENTER_OFFSET_THRESHOLD_MM:.2f}mm "
-          f"= (stud_hole {_px_to_mm.GROUND_TRUTH_MM['stud_hole']}mm - "
-          f"screw_head {_px_to_mm.GROUND_TRUTH_MM['screw_head']}mm) / 2")
+          f"= (stud_hole {dc.GROUND_TRUTH_MM['stud_hole']}mm - "
+          f"screw_head {dc.GROUND_TRUTH_MM['screw_head']}mm) / 2")
 
     # 시각화 - 최종 결과물: stud_hole(빈 구멍, 노랑) + screw_head(삽입 상태별 색) 한 장에 표시
     vis = color_img.copy()

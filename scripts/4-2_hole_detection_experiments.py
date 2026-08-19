@@ -16,9 +16,7 @@ from ultralytics import YOLO
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from depth_preprocessing import build_pipeline, build_filters, capture_averaged_depth  # noqa: E402
-from importlib import import_module  # noqa: E402
-
-_px_to_mm = import_module("5_px_to_mm")
+import detection_core as _px_to_mm  # noqa: E402  (검출 로직이 5_px_to_mm.py -> detection_core.py로 이동됨)
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESULTS_DIR = os.path.join(_ROOT, "results")

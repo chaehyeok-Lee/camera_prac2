@@ -1,0 +1,532 @@
+{
+  "screw_summary": [
+    {
+      "aspect_ratio": 1.09,
+      "status": "정상",
+      "area": 307
+    },
+    {
+      "aspect_ratio": 1.49,
+      "status": "틀어짐",
+      "area": 216
+    },
+    {
+      "aspect_ratio": 1.04,
+      "status": "정상",
+      "area": 328
+    },
+    {
+      "aspect_ratio": 1.51,
+      "status": "틀어짐",
+      "area": 189
+    },
+    {
+      "aspect_ratio": 1.14,
+      "status": "정상",
+      "area": 293
+    },
+    {
+      "aspect_ratio": 1.64,
+      "status": "틀어짐",
+      "area": 146
+    },
+    {
+      "aspect_ratio": 1.25,
+      "status": "정상",
+      "area": 225
+    },
+    {
+      "aspect_ratio": 1.41,
+      "status": "틀어짐",
+      "area": 170
+    },
+    {
+      "aspect_ratio": 1.58,
+      "status": "틀어짐",
+      "area": 126
+    },
+    {
+      "aspect_ratio": 1.11,
+      "status": "정상",
+      "area": 372
+    },
+    {
+      "aspect_ratio": 1.4,
+      "status": "틀어짐",
+      "area": 491
+    },
+    {
+      "aspect_ratio": 2.47,
+      "status": "틀어짐",
+      "area": 113
+    },
+    {
+      "aspect_ratio": 1.82,
+      "status": "틀어짐",
+      "area": 558
+    }
+  ],
+  "screw_instances": [
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        432.0,
+        7.8
+      ],
+      "diameter_px": 19.77,
+      "depth_mm": 292.3,
+      "depth_source": "mask",
+      "diameter_mm": 9.029,
+      "ground_truth_mm": 6.0,
+      "error_mm": 3.029,
+      "error_pct": 50.5,
+      "aspect_ratio": 1.09,
+      "insertion_status": "정상"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        487.6,
+        8.1
+      ],
+      "diameter_px": 16.58,
+      "depth_mm": 293.4,
+      "depth_source": "mask",
+      "diameter_mm": 7.603,
+      "ground_truth_mm": 6.0,
+      "error_mm": 1.603,
+      "error_pct": 26.7,
+      "aspect_ratio": 1.49,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        541.0,
+        8.2
+      ],
+      "diameter_px": 20.44,
+      "depth_mm": 294.5,
+      "depth_source": "mask",
+      "diameter_mm": 9.403,
+      "ground_truth_mm": 6.0,
+      "error_mm": 3.403,
+      "error_pct": 56.7,
+      "aspect_ratio": 1.04,
+      "insertion_status": "정상"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        595.0,
+        7.6
+      ],
+      "diameter_px": 15.51,
+      "depth_mm": 295.4,
+      "depth_source": "mask",
+      "diameter_mm": 7.161,
+      "ground_truth_mm": 6.0,
+      "error_mm": 1.161,
+      "error_pct": 19.4,
+      "aspect_ratio": 1.51,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        646.8,
+        7.8
+      ],
+      "diameter_px": 19.31,
+      "depth_mm": 296.7,
+      "depth_source": "mask",
+      "diameter_mm": 8.955,
+      "ground_truth_mm": 6.0,
+      "error_mm": 2.955,
+      "error_pct": 49.2,
+      "aspect_ratio": 1.14,
+      "insertion_status": "정상"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        699.6,
+        6.5
+      ],
+      "diameter_px": 13.63,
+      "depth_mm": 297.6,
+      "depth_source": "mask",
+      "diameter_mm": 6.341,
+      "ground_truth_mm": 6.0,
+      "error_mm": 0.341,
+      "error_pct": 5.7,
+      "aspect_ratio": 1.64,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        750.1,
+        6.4
+      ],
+      "diameter_px": 16.93,
+      "depth_mm": 298.8,
+      "depth_source": "mask",
+      "diameter_mm": 7.901,
+      "ground_truth_mm": 6.0,
+      "error_mm": 1.901,
+      "error_pct": 31.7,
+      "aspect_ratio": 1.25,
+      "insertion_status": "정상"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        850.9,
+        5.6
+      ],
+      "diameter_px": 14.71,
+      "depth_mm": 300.7,
+      "depth_source": "mask",
+      "diameter_mm": 6.912,
+      "ground_truth_mm": 6.0,
+      "error_mm": 0.912,
+      "error_pct": 15.2,
+      "aspect_ratio": 1.41,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        949.0,
+        4.6
+      ],
+      "diameter_px": 12.67,
+      "depth_mm": 302.6,
+      "depth_source": "mask",
+      "diameter_mm": 5.989,
+      "ground_truth_mm": 6.0,
+      "error_mm": -0.011,
+      "error_pct": -0.2,
+      "aspect_ratio": 1.58,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        329.5,
+        331.5
+      ],
+      "diameter_px": 21.76,
+      "depth_mm": 293.5,
+      "depth_source": "mask",
+      "diameter_mm": 9.981,
+      "ground_truth_mm": 6.0,
+      "error_mm": 3.981,
+      "error_pct": 66.4,
+      "aspect_ratio": 1.11,
+      "insertion_status": "정상"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        776.4,
+        353.6
+      ],
+      "diameter_px": 25.0,
+      "depth_mm": 302.7,
+      "depth_source": "mask",
+      "diameter_mm": 11.824,
+      "ground_truth_mm": 6.0,
+      "error_mm": 5.824,
+      "error_pct": 97.1,
+      "aspect_ratio": 1.4,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        1028.3,
+        402.2
+      ],
+      "diameter_px": 11.99,
+      "depth_mm": 308.1,
+      "depth_source": "mask",
+      "diameter_mm": 5.775,
+      "ground_truth_mm": 6.0,
+      "error_mm": -0.225,
+      "error_pct": -3.8,
+      "aspect_ratio": 2.47,
+      "insertion_status": "틀어짐"
+    },
+    {
+      "class": "screw_head",
+      "confidence": 1.0,
+      "center_px": [
+        697.4,
+        564.8
+      ],
+      "diameter_px": 26.65,
+      "depth_mm": 303.2,
+      "depth_source": "mask",
+      "diameter_mm": 12.629,
+      "ground_truth_mm": 6.0,
+      "error_mm": 6.629,
+      "error_pct": 110.5,
+      "aspect_ratio": 1.82,
+      "insertion_status": "틀어짐"
+    }
+  ],
+  "stud_holes": [
+    {
+      "class": "stud_hole",
+      "confidence": 0.712,
+      "center_px": [
+        482.3,
+        523.0
+      ],
+      "diameter_px": 43.61,
+      "depth_mm": 298.5,
+      "depth_source": "mask",
+      "diameter_mm": 20.407,
+      "ground_truth_mm": 10.0,
+      "error_mm": 10.407,
+      "error_pct": 104.1,
+      "rect_residual_px": 1.76,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.693,
+      "center_px": [
+        784.2,
+        469.8
+      ],
+      "diameter_px": 40.48,
+      "depth_mm": 304.0,
+      "depth_source": "mask",
+      "diameter_mm": 18.942,
+      "ground_truth_mm": 10.0,
+      "error_mm": 8.942,
+      "error_pct": 89.4,
+      "rect_residual_px": 1.75,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.667,
+      "center_px": [
+        217.7,
+        387.0
+      ],
+      "diameter_px": 42.47,
+      "depth_mm": 291.8,
+      "depth_source": "mask",
+      "diameter_mm": 19.873,
+      "ground_truth_mm": 10.0,
+      "error_mm": 9.873,
+      "error_pct": 98.7,
+      "rect_residual_px": 1.52,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.649,
+      "center_px": [
+        902.3,
+        491.5
+      ],
+      "diameter_px": 46.4,
+      "depth_mm": 306.6,
+      "depth_source": "mask",
+      "diameter_mm": 21.713,
+      "ground_truth_mm": 10.0,
+      "error_mm": 11.713,
+      "error_pct": 117.1,
+      "rect_residual_px": 1.94,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.617,
+      "center_px": [
+        1000.3,
+        294.8
+      ],
+      "diameter_px": 39.79,
+      "depth_mm": 306.6,
+      "depth_source": "mask",
+      "diameter_mm": 18.618,
+      "ground_truth_mm": 10.0,
+      "error_mm": 8.618,
+      "error_pct": 86.2,
+      "rect_residual_px": 1.67,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.612,
+      "center_px": [
+        228.6,
+        530.7
+      ],
+      "diameter_px": 45.73,
+      "depth_mm": 293.5,
+      "depth_source": "mask",
+      "diameter_mm": 21.399,
+      "ground_truth_mm": 10.0,
+      "error_mm": 11.399,
+      "error_pct": 114.0,
+      "rect_residual_px": 1.66,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.579,
+      "center_px": [
+        564.3,
+        334.3
+      ],
+      "diameter_px": 40.53,
+      "depth_mm": 298.2,
+      "depth_source": "mask",
+      "diameter_mm": 18.964,
+      "ground_truth_mm": 10.0,
+      "error_mm": 8.964,
+      "error_pct": 89.6,
+      "rect_residual_px": 1.5,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.551,
+      "center_px": [
+        879.3,
+        284.7
+      ],
+      "diameter_px": 38.78,
+      "depth_mm": 304.0,
+      "depth_source": "mask",
+      "diameter_mm": 18.146,
+      "ground_truth_mm": 10.0,
+      "error_mm": 8.146,
+      "error_pct": 81.5,
+      "rect_residual_px": 1.62,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.513,
+      "center_px": [
+        1013.7,
+        454.6
+      ],
+      "diameter_px": 43.44,
+      "depth_mm": 308.4,
+      "depth_source": "mask",
+      "diameter_mm": 20.326,
+      "ground_truth_mm": 10.0,
+      "error_mm": 10.326,
+      "error_pct": 103.3,
+      "rect_residual_px": 2.17,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.47,
+      "center_px": [
+        342.6,
+        606.0
+      ],
+      "diameter_px": 44.93,
+      "depth_mm": 296.5,
+      "depth_source": "mask",
+      "diameter_mm": 21.023,
+      "ground_truth_mm": 10.0,
+      "error_mm": 11.023,
+      "error_pct": 110.2,
+      "rect_residual_px": 1.78,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.458,
+      "center_px": [
+        679.1,
+        209.8
+      ],
+      "diameter_px": 42.16,
+      "depth_mm": 299.3,
+      "depth_source": "mask",
+      "diameter_mm": 19.725,
+      "ground_truth_mm": 10.0,
+      "error_mm": 9.725,
+      "error_pct": 97.3,
+      "rect_residual_px": 1.57,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.44,
+      "center_px": [
+        458.5,
+        361.1
+      ],
+      "diameter_px": 44.96,
+      "depth_mm": 296.4,
+      "depth_source": "mask",
+      "diameter_mm": 21.038,
+      "ground_truth_mm": 10.0,
+      "error_mm": 11.038,
+      "error_pct": 110.4,
+      "rect_residual_px": 1.82,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.342,
+      "center_px": [
+        585.2,
+        467.0
+      ],
+      "diameter_px": 42.65,
+      "depth_mm": 300.0,
+      "depth_source": "mask",
+      "diameter_mm": 19.955,
+      "ground_truth_mm": 10.0,
+      "error_mm": 9.955,
+      "error_pct": 99.5,
+      "rect_residual_px": 1.63,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.159,
+      "center_px": [
+        332.2,
+        335.2
+      ],
+      "diameter_px": 27.7,
+      "depth_mm": 293.6,
+      "depth_source": "mask",
+      "diameter_mm": 12.961,
+      "ground_truth_mm": 10.0,
+      "error_mm": 2.961,
+      "error_pct": 29.6,
+      "rect_residual_px": 1.43,
+      "rect_coverage": 0.98
+    }
+  ]
+}
