@@ -1,0 +1,7 @@
+path: C:/Users/pc/Desktop/tire/dataset
+train: images
+val: images  # 데이터 적어서 초기엔 train=val 공용, 이미지 수 늘어나면 분리 예정
+
+names:
+  0: screw_head
+  1: stud_hole
