@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
 .claude/settings.local.json
+
+# 재생성 가능한 학습 산출물/사전학습 가중치 (원본 데이터는 dataset/ 에 유지, 여기서 제외 안 함)
+runs/
 *.pt
 *.cache

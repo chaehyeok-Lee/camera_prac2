@@ -29,7 +29,7 @@ resume: false
 amp: true
 fraction: 1.0
 profile: false
-freeze: null
+freeze: 10
 multi_scale: 0.0
 compile: false
 channels_last: false
@@ -107,8 +107,8 @@ bgr: 0.0
 mosaic: 1.0
 mixup: 0.0
 cutmix: 0.0
-copy_paste: 0.0
-copy_paste_mode: flip
+copy_paste: 0.5
+copy_paste_mode: mixup
 auto_augment: randaugment
 erasing: 0.4
 cfg: null

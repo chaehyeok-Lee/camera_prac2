@@ -35,6 +35,11 @@ def circle_to_polygon(cx, cy, r, w, h, n=POLYGON_POINTS):
     return list(zip(xs, ys))
 
 
+def circle_clips_edge(cx, cy, r, w, h):
+    """원이 프레임 경계를 넘어가는지 확인 - 넘어가면 clip으로 폴리곤이 원이 아닌 반달 모양으로 왜곡됨."""
+    return cx - r < 0 or cx + r > w or cy - r < 0 or cy + r > h
+
+
 def load_labels(label_path, w, h):
     """저장된 YOLO-seg txt -> [(cx, cy, r, cls), ...] 픽셀 단위로 근사 복원."""
     circles = []
@@ -97,6 +102,9 @@ class Labeler:
                 r = float(np.hypot(x - cx, y - cy))
                 if r >= 2:
                     self.circles.append((cx, cy, r, self.active_class))
+                    if circle_clips_edge(cx, cy, r, self.w, self.h):
+                        print(f"경고: 원이 프레임 경계에 걸침 (cx={cx:.0f}, cy={cy:.0f}, r={r:.0f}) "
+                              f"- 저장 시 폴리곤이 반달 모양으로 왜곡됨. 가능하면 경계에서 떨어뜨려 다시 찍으세요.")
                 self.pending_center = None
 
     def undo(self):
@@ -105,9 +113,14 @@ class Labeler:
 
     def render(self):
         vis = self.img.copy()
+        n_edge_risk = 0
         for cx, cy, r, cls in self.circles:
             color = CLASS_COLORS.get(cls, (200, 200, 200))
-            cv2.circle(vis, (int(cx), int(cy)), int(r), color, 2)
+            if circle_clips_edge(cx, cy, r, self.w, self.h):
+                n_edge_risk += 1
+                cv2.circle(vis, (int(cx), int(cy)), int(r), (0, 0, 255), 3)  # 빨강 = 경계 왜곡 위험
+            else:
+                cv2.circle(vis, (int(cx), int(cy)), int(r), color, 2)
             cv2.circle(vis, (int(cx), int(cy)), 2, color, -1)
         if self.pending_center is not None:
             cx, cy = self.pending_center
@@ -125,6 +138,9 @@ class Labeler:
                    f"click=center->radius, z=undo, n/p=next/prev, q=quit)")
         cv2.putText(vis, status1, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 0), 1, cv2.LINE_AA)
         cv2.putText(vis, status2, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.55, active_color, 1, cv2.LINE_AA)
+        if n_edge_risk:
+            cv2.putText(vis, f"경계 왜곡 위험 원 {n_edge_risk}개 (빨강 표시)", (10, 75),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 255), 2, cv2.LINE_AA)
         return vis
 
     def goto(self, delta):

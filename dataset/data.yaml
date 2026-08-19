@@ -1,6 +1,7 @@
 path: C:/Users/pc/Desktop/tire/dataset
-train: images
-val: images  # 데이터 적어서 초기엔 train=val 공용, 이미지 수 늘어나면 분리 예정
+train: train.txt   # 11장
+val: val.txt        # 3장 (specimen1_009/010, specimen2_004) - 진짜 held-out, train과 겹치지 않음
+                     # 14장뿐이라 val 지표 통계적 신뢰도는 낮지만, train=val 중복(암기 확인)은 벗어남
 
 names:
   0: screw_head
