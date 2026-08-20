@@ -172,6 +172,37 @@ def render_live_overlay(color_img, screw_instances, stud_holes, status):
     return vis
 
 
+def run_live_demo(pipeline, align, filters, depth_scale, intr, duration_sec):
+    """--live-demo-sec 전용 - 정지판정 없이 라이브 검출 갱신 프레임을 그대로 디스크에 저장.
+    '이동 중 라이브 검출'이 실제로 동작하는지 스크린샷으로 증명하는 용도(순간적으로만 뜨고
+    사라지는 cv2 창 대신 결과물로 남김)."""
+    demo_dir = os.path.join(RESULTS_DIR, "8_live_demo")
+    os.makedirs(demo_dir, exist_ok=True)
+    print(f"라이브 데모 {duration_sec}초 시작 - {demo_dir}에 갱신 프레임 저장")
+
+    frame_idx = 0
+    saved = 0
+    t_start = time.time()
+    while time.time() - t_start < duration_sec:
+        depth_mm, color_img = grab_filtered_depth_mm(pipeline, align, filters, depth_scale)
+        if depth_mm is None:
+            continue
+        frame_idx += 1
+        if frame_idx % LIVE_DETECT_EVERY_N_FRAMES == 0:
+            t_det0 = time.time()
+            screw_instances, stud_holes = detect_live(color_img, depth_mm, intr)
+            t_det = time.time() - t_det0
+            status = f"[LIVE DEMO] t={time.time()-t_start:.1f}s detect={t_det*1000:.0f}ms"
+            vis = render_live_overlay(color_img, screw_instances, stud_holes, status)
+            cv2.imshow("realtime_detect", vis)
+            cv2.waitKey(1)
+            path = os.path.join(demo_dir, f"frame_{saved:03d}.png")
+            cv2.imwrite(path, vis)
+            saved += 1
+            print(f"  저장: {path} (screw={len(screw_instances)}, hole={len(stud_holes)}, {t_det*1000:.0f}ms)")
+    print(f"라이브 데모 종료 - {saved}장 저장, 총 {frame_idx}프레임 처리")
+
+
 def render_result(color_img, results, stud_holes, status_text=None):
     vis = color_img.copy()
     for hole in stud_holes:
@@ -199,6 +230,10 @@ def main():
     parser.add_argument("--once", action="store_true",
                          help="첫 측정 완료(RESULT_SHOWN 진입) 즉시 결과 저장 후 종료 - 원격/헤드리스 검증용"
                               "(GUI 창에 q를 못 누르는 상황 대비)")
+    parser.add_argument("--live-demo-sec", type=float, default=0,
+                         help="지정하면 정지판정/MEASURING 없이 WAITING 라이브 오버레이만 이 초만큼 "
+                              "돌리면서 매 갱신 프레임을 results/8_live_demo/에 저장 - 라이브 검출이 "
+                              "실제로 동작하는지 스크린샷으로 증명하기 위한 디버그 모드")
     args = parser.parse_args()
 
     pipeline, align, depth_scale = build_pipeline()
@@ -211,6 +246,12 @@ def main():
     t_warm = time.time()
     dc.get_model().predict(np.zeros((720, 1280, 3), dtype=np.uint8), verbose=False)
     print(f"  완료 ({time.time() - t_warm:.2f}s)")
+
+    if args.live_demo_sec > 0:
+        run_live_demo(pipeline, align, filters, depth_scale, intr, args.live_demo_sec)
+        pipeline.stop()
+        cv2.destroyAllWindows()
+        return
 
     baseline = insertion.load_baseline()
 
