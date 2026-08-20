@@ -9,6 +9,7 @@
 import os
 import sys
 import json
+import argparse
 import numpy as np
 import cv2
 
@@ -24,6 +25,12 @@ N_FRAMES = 30
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--specimen", default="foam_panel_v1", choices=list(dc.SPECIMEN_PROFILES),
+                         help="시편 프로파일 선택 - 캘리퍼 값/depth 범위/나사 검출 파라미터가 시편마다 다름")
+    args = parser.parse_args()
+    dc.set_profile(args.specimen)
+
     pipeline, align, depth_scale = build_pipeline()
     filters = build_filters()
 

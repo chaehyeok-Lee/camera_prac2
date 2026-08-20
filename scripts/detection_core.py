@@ -17,7 +17,59 @@ from ultralytics import YOLO
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(_ROOT, "runs", "screw_seg", "weights", "best.pt")
 
-GROUND_TRUTH_MM = {"screw_head": 6.0, "stud_hole": 10.0}  # 캘리퍼 실측값
+# 시편 종류별 파라미터 프로파일 - 시편이 바뀌면 캘리퍼 실측값/카메라 거리/나사 픽셀 크기 등이
+# 전부 달라짐(다른 트레드 시편으로 시도했을 때 stud_hole 지름이 6~16mm로 제각각 나오고 나사
+# 1개가 완전히 미검출된 걸 확인 - GROUND_TRUTH_MM 6/10mm을 그 시편에 그대로 적용해서 생긴
+# 문제). set_profile()로 전환하면 아래 build_instance/detect_* 전부가 자동으로 반영함
+# (모듈 전역을 재할당하는 방식이라 함수 시그니처를 안 건드림).
+SPECIMEN_PROFILES = {
+    "foam_panel_v1": {  # 기존 시편(specimen1/2/3) - 4~6번 개발에 쓴 원본
+        "ground_truth_mm": {"screw_head": 6.0, "stud_hole": 10.0},  # 캘리퍼 실측값
+        "depth_range_mm": (180, 400),  # confirm.md 측정거리(250mm) 기준
+        "screw_area_px": (100, 4000),
+        "screw_min_solidity": 0.75,
+        "screw_tilt_aspect_ratio": 1.5,
+        "screw_max_aspect_ratio": 2.5,
+    },
+    "tread_v2": {  # 2026-08-20 시도한 다른 트레드 시편 - 구멍이 90도로 꺾인 게 아니라
+        # 오목(concave)하게 들어가 있어서 기존 방식의 캘리퍼 측정이 애매함(사용자 확인) ->
+        # 캘리퍼 값 확보 전까지 ground_truth는 None으로 둠. build_instance가 gt=None이면
+        # error_mm/error_pct를 그냥 건너뛰므로(기존 코드 경로 그대로) 에러 없이 동작함 -
+        # 대신 diameter_mm(실측 mm 추정치) 자체는 그대로 나오니 그 값과 실제 구멍을 비교해
+        # 정성적으로 판단하거나, 이후 다른 방식(예: 개구부 림 지름만 캘리퍼로 재기)으로 채울 것.
+        "ground_truth_mm": {"screw_head": None, "stud_hole": None},
+        "depth_range_mm": (180, 400),  # 실측 depth 258~272mm로 기존 범위 안이라 일단 재사용
+        "screw_area_px": (100, 4000),  # 나사 1개 미검출 원인일 수 있음 - 재조정 필요(미확정)
+        "screw_min_solidity": 0.75,
+        "screw_tilt_aspect_ratio": 1.5,
+        "screw_max_aspect_ratio": 2.5,
+    },
+}
+
+CURRENT_PROFILE_NAME = None
+GROUND_TRUTH_MM = None
+SPECIMEN_DEPTH_RANGE_MM = None
+
+
+def set_profile(name):
+    """활성 시편 프로파일 전환 - GROUND_TRUTH_MM/SPECIMEN_DEPTH_RANGE_MM 모듈 전역을 갱신함.
+    build_instance 등은 이 이름들을 함수 바디에서 매 호출마다 조회하므로(파이썬 전역 조회는
+    호출 시점에 일어남) 재할당만으로 이후의 모든 호출에 자동 반영됨."""
+    global CURRENT_PROFILE_NAME, GROUND_TRUTH_MM, SPECIMEN_DEPTH_RANGE_MM
+    if name not in SPECIMEN_PROFILES:
+        raise ValueError(f"알 수 없는 시편 프로파일: {name!r} (선택 가능: {list(SPECIMEN_PROFILES)})")
+    CURRENT_PROFILE_NAME = name
+    p = SPECIMEN_PROFILES[name]
+    GROUND_TRUTH_MM = p["ground_truth_mm"]
+    SPECIMEN_DEPTH_RANGE_MM = p["depth_range_mm"]
+    print(f"[detection_core] 시편 프로파일 적용: {name}")
+
+
+def current_profile():
+    return SPECIMEN_PROFILES[CURRENT_PROFILE_NAME]
+
+
+set_profile("foam_panel_v1")  # 기본값 - 기존 스크립트들이 인자 없이 그대로 써도 동작 동일
 
 # stud_hole만 YOLO confidence threshold 적용 대상 (screw_head는 색상 기반 검출이라 conf 개념 없음).
 # 0.28은 4-2 실험 스크립트가 "기존 방식"과 비교하는 baseline 값으로만 남겨둠(운영 미사용) -
@@ -25,11 +77,6 @@ GROUND_TRUTH_MM = {"screw_head": 6.0, "stud_hole": 10.0}  # 캘리퍼 실측값
 CONF_THRESHOLD_BY_CLASS = {"stud_hole": 0.28}
 STUD_HOLE_CONF = 0.15  # 4-2 실험(scripts/4-2_hole_detection_experiments.py)에서 재현율이
 # 뚜렷이 좋아짐(9->12개, 같은 프레임에서 오탐 없이 확인) - 정확도는 평면보정으로 별도 확보
-
-# 시편은 카메라에서 약 250mm(confirm.md 측정거리) 거리 - 이 범위를 벗어나면 배경(벽/모니터/케이블)으로 간주해 제외.
-# color 기반 screw_head 검출기가 폼 패널 틈새로 보이는 먼 배경(흰 벽)을 나사로 오탐하는 게
-# held-out 테스트에서 확인돼 추가함 (버텀업 검증: 실측 캡처로 범위 재조정 필요할 수 있음).
-SPECIMEN_DEPTH_RANGE_MM = (180, 400)
 
 PLANE_FIT_SAMPLE_STEP = 8   # 전체 프레임에서 이 간격으로만 샘플링해 평면 피팅(속도 위해 서브샘플)
 PLANE_FIT_MIN_POINTS = 200
@@ -95,16 +142,32 @@ def blob_aspect_ratio(mask_bool):
     return float(np.sqrt(eigvals[1]) / np.sqrt(eigvals[0]))  # >=1, 1에 가까울수록 원형
 
 
-def detect_screw_heads_by_color(color_img, min_area_px=100, max_area_px=4000,
-                                 min_solidity=0.75, tilt_aspect_ratio=1.5, max_aspect_ratio=2.5):
+def detect_screw_heads_by_color(color_img, min_area_px=None, max_area_px=None,
+                                 min_solidity=None, tilt_aspect_ratio=None, max_aspect_ratio=None):
     """금속 나사머리는 은색(밝음, 무채색) vs 무광 검은 배경 - 명도 대비가 커서
     학습 없이 밝기 임계값(Otsu, 이미지마다 자동 적응)만으로 검출.
+
+    인자를 명시하지 않으면(None) 활성 시편 프로파일(set_profile)의 값을 씀 - 시편마다
+    나사 픽셀 크기/형태 판정 기준이 다를 수 있어서(2026-08-20 다른 시편에서 나사 1개
+    완전 미검출 확인, 원인 후보 중 하나).
     YOLO screw_head가 학습 데이터 부족으로 불안정한 것의 대안.
 
     나사가 기울어져 삽입되면(6번 '틀어짐' 케이스) 카메라 시점에서 원이 아니라 타원으로 보임
     -> 이걸 노이즈로 버리지 않고 장단축 비율(aspect_ratio)로 정상/틀어짐을 분류해서 같이 반환.
     solidity(블롭 면적/블롭 컨벡스헐 면적)로 케이블 하이라이트 같은 불규칙한 노이즈만 배제
     (타원은 solidity가 높게 유지되므로 축정렬 bbox fill_ratio보다 회전에 안전)."""
+    p = current_profile()
+    if min_area_px is None:
+        min_area_px = p["screw_area_px"][0]
+    if max_area_px is None:
+        max_area_px = p["screw_area_px"][1]
+    if min_solidity is None:
+        min_solidity = p["screw_min_solidity"]
+    if tilt_aspect_ratio is None:
+        tilt_aspect_ratio = p["screw_tilt_aspect_ratio"]
+    if max_aspect_ratio is None:
+        max_aspect_ratio = p["screw_max_aspect_ratio"]
+
     hsv = cv2.cvtColor(color_img, cv2.COLOR_BGR2HSV)
     v = hsv[:, :, 2]
 

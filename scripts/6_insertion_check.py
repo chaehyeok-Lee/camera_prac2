@@ -16,6 +16,7 @@
 import os
 import sys
 import json
+import argparse
 import numpy as np
 import cv2
 
@@ -40,16 +41,26 @@ BASELINE_STD_MULT = 3
 # 틀어짐(중심좌표) 임계값: 통계 추정이 아니라 기하학적 제약 - 스터드홀이 나사머리보다 커서
 # 생기는 "허용 편심 반경" = (stud_hole_mm - screw_head_mm) / 2. 이보다 중심이 어긋나면
 # 나사가 물리적으로 구멍 벽에 닿아있다는 뜻이라, 캘리브레이션 없이도 타당한 임계값이 됨.
-CENTER_OFFSET_THRESHOLD_MM = (
-    dc.GROUND_TRUTH_MM["stud_hole"] - dc.GROUND_TRUTH_MM["screw_head"]
-) / 2
+#
+# 모듈 상수가 아니라 함수로 둔 이유: dc.GROUND_TRUTH_MM은 dc.set_profile()로 실행 중에
+# 바뀌는데, 모듈 로드 시점에 한 번만 계산하면 프로파일을 전환해도 그때 값이 안 바뀜(2026-08-20
+# 다른 시편 프로파일 도입하며 발견). 캘리퍼 값이 없는 프로파일(구멍이 오목해서 기존 방식으로
+# 잴 수 없는 시편 등)에서는 None을 반환 - 호출부가 판정보류로 처리.
+def center_offset_threshold_mm():
+    gt = dc.GROUND_TRUTH_MM
+    if gt.get("stud_hole") is None or gt.get("screw_head") is None:
+        return None
+    return (gt["stud_hole"] - gt["screw_head"]) / 2
 
-# 실측 확인 결과: 제대로 삽입된 나사는 자기 구멍을 거의 다 가려서 그 구멍이 빈 stud_hole로
-# 따로 검출되지 않음 -> match_nearest_stud_hole이 몇 칸 떨어진 "다른" 빈 구멍에 억지로
-# 매칭되어 26~33mm짜리 가짜 오차를 만드는 걸 실캡처로 확인함(정상 나사가 전부 틀어짐으로
-# 오판). 나사가 진짜 자기 구멍 안에 있다면 매칭 오차는 물리적으로 CENTER_OFFSET_THRESHOLD_MM을
-# 크게 못 넘으므로, 그보다 훨씬 먼 매칭은 "다른 구멍에 잘못 매칭됨"으로 보고 판정을 보류한다.
-MAX_PLAUSIBLE_MATCH_MM = CENTER_OFFSET_THRESHOLD_MM + 3
+
+def max_plausible_match_mm():
+    """실측 확인 결과: 제대로 삽입된 나사는 자기 구멍을 거의 다 가려서 그 구멍이 빈 stud_hole로
+    따로 검출되지 않음 -> match_nearest_stud_hole이 몇 칸 떨어진 "다른" 빈 구멍에 억지로
+    매칭되어 26~33mm짜리 가짜 오차를 만드는 걸 실캡처로 확인함(정상 나사가 전부 틀어짐으로
+    오판). 나사가 진짜 자기 구멍 안에 있다면 매칭 오차는 물리적으로 center_offset_threshold_mm()을
+    크게 못 넘으므로, 그보다 훨씬 먼 매칭은 "다른 구멍에 잘못 매칭됨"으로 보고 판정을 보류한다."""
+    t = center_offset_threshold_mm()
+    return None if t is None else t + 3
 
 
 def local_panel_depth_mm(mask_bool, depth_mm, center_xy,
@@ -116,6 +127,8 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
     protrusion_threshold = None
     if len(baseline) >= MIN_BASELINE_N:
         protrusion_threshold = float(np.mean(baseline) + BASELINE_STD_MULT * np.std(baseline))
+    center_threshold = center_offset_threshold_mm()  # None이면(캘리퍼 값 없는 프로파일) 중심 판정 보류
+    max_match = max_plausible_match_mm()
 
     results = []
     for idx, det in enumerate(screw_dets):
@@ -137,9 +150,9 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
         matched_hole, dist_px = match_nearest_stud_hole(inst["center_px"], stud_holes)
         center_offset_mm = None
         match_rejected = False
-        if dist_px is not None:
+        if dist_px is not None and max_match is not None:
             candidate_offset_mm = dist_px * inst["depth_mm"] / fx
-            if candidate_offset_mm <= MAX_PLAUSIBLE_MATCH_MM:
+            if candidate_offset_mm <= max_match:
                 center_offset_mm = candidate_offset_mm
                 inst["center_offset_mm"] = round(center_offset_mm, 2)
             else:
@@ -147,13 +160,16 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
                 # 추정, 판정 근거 없음(오탐 방지 위해 틀어짐 판정 안 함)
                 match_rejected = True
                 inst["center_offset_mm"] = None
+        elif dist_px is not None:
+            # max_match=None -> 이 프로파일엔 캘리퍼 기준값이 없어 중심 판정 자체가 불가능
+            inst["center_offset_mm"] = None
 
         statuses = []
         reasons = []
         if inst["tilt_status"] == "틀어짐":
             statuses.append("틀어짐")
             reasons.append("각도")
-        if center_offset_mm is not None and center_offset_mm > CENTER_OFFSET_THRESHOLD_MM:
+        if center_offset_mm is not None and center_threshold is not None and center_offset_mm > center_threshold:
             if "틀어짐" not in statuses:
                 statuses.append("틀어짐")
             reasons.append("중심")
@@ -173,6 +189,12 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--specimen", default="foam_panel_v1", choices=list(dc.SPECIMEN_PROFILES),
+                         help="시편 프로파일 선택 - 캘리퍼 값/depth 범위/나사 검출 파라미터가 시편마다 다름")
+    args = parser.parse_args()
+    dc.set_profile(args.specimen)
+
     pipeline, align, depth_scale = build_pipeline()
     filters = build_filters()
 
@@ -217,9 +239,13 @@ def main():
     else:
         print(f"\n덜박힘 임계값 미확정 - 정상 표본 {len(baseline)}/{MIN_BASELINE_N}개 누적됨 "
               f"(계속 실행해 표본을 쌓으면 자동으로 확정됨)")
-    print(f"틀어짐(중심) 임계값(기하 제약): {CENTER_OFFSET_THRESHOLD_MM:.2f}mm "
-          f"= (stud_hole {dc.GROUND_TRUTH_MM['stud_hole']}mm - "
-          f"screw_head {dc.GROUND_TRUTH_MM['screw_head']}mm) / 2")
+    center_threshold = center_offset_threshold_mm()
+    if center_threshold is not None:
+        print(f"틀어짐(중심) 임계값(기하 제약): {center_threshold:.2f}mm "
+              f"= (stud_hole {dc.GROUND_TRUTH_MM['stud_hole']}mm - "
+              f"screw_head {dc.GROUND_TRUTH_MM['screw_head']}mm) / 2")
+    else:
+        print("틀어짐(중심) 임계값: 이 프로파일엔 캘리퍼 기준값이 없어 계산 불가 - 판정 항상 보류됨")
 
     # 시각화 - 최종 결과물: stud_hole(빈 구멍, 노랑) + screw_head(삽입 상태별 색) 한 장에 표시
     vis = color_img.copy()

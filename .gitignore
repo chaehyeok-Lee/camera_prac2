@@ -6,3 +6,4 @@ __pycache__/
 runs/
 *.pt
 *.cache
+~$*  # Office 잠금/임시 파일

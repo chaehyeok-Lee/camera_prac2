@@ -9,8 +9,9 @@
 소요시간 -37% 개선, 원 피팅 정확도 합성테스트 검증까지 끝난 상태에서 이어서 진행.
 
 ## 상태
-틀어짐 완화+라이브 오버레이 실카메라 검증 완료(이동 추적까지 확인). 반실시간/실시간 셀프
-리뷰로 구체적 개선점 정리(프로파일링 근거 포함) - 아직 미적용.
+틀어짐 완화+라이브 오버레이 실카메라 검증 완료. 셀프 리뷰로 개선점 정리(미적용). 시편별
+파라미터 프로파일(`SPECIMEN_PROFILES`) 추가 및 실카메라 검증 완료 - 캘리퍼 값 미확보 시편은
+error_pct만 None 처리, 판정 로직 버그 하나 발견해 같이 수정함.
 
 ---
 
@@ -54,3 +55,21 @@
 - [ ] `LIVE_DETECT_EVERY_N_FRAMES=5`가 실제 diff-loop 프레임레이트/SETTLE_FRAMES 타이밍에 미치는 영향을 직접 측정 안 함
 
 **결론**: 반실시간은 안정적이나 모션 임계값이 미확정 상태로 남아있는 게 가장 큰 리스크. 실시간(라이브)은 원 피팅 생략이 가장 확실한 성능 개선 레버로 프로파일링까지 마쳤음 - 다음에 적용 지시하면 바로 구현 가능.
+
+---
+
+### 시편 종류별 파라미터 프로파일 &nbsp;&nbsp;`검토 완료` (실카메라 검증)
+다른 트레드 시편으로 시도한 결과 확인: stud_hole 지름이 6~16mm로 제각각(기존 GROUND_TRUTH_MM=10mm를 그대로 적용해서 오차 -39%~+64%로 무의미), 화면에 뚜렷이 보이는 나사 1개가 색상검출에서 완전히 빠짐. 원인 진단 - depth는 258~272mm로 기존 범위(180~400) 안이라 문제 없음, `rect_coverage` 0.97~0.99로 원 피팅 자체는 정상 동작(진짜 다양한 홀 크기이거나 트레드 패턴 일부를 오탐한 것으로 추정, 미확정). 이 시편은 구멍이 90도로 꺾인 게 아니라 오목(concave)해서 기존 방식의 캘리퍼 측정이 애매함(사용자 확인) - 캘리퍼 값은 보류.
+
+- [x] `detection_core.py`에 `SPECIMEN_PROFILES` dict 추가 (`foam_panel_v1`/`tread_v2`) - ground_truth_mm/depth_range_mm/screw 검출 파라미터를 시편별로 분리
+- [x] `set_profile()`로 모듈 전역(GROUND_TRUTH_MM, SPECIMEN_DEPTH_RANGE_MM) 재할당 - 기존 함수들은 매 호출시 전역을 조회하므로 시그니처 변경 없이 전부 자동 반영됨
+- [x] `detect_screw_heads_by_color`의 area/solidity/aspect_ratio 파라미터를 None-센티널 패턴으로 프로파일에서 읽어오게 변경 (명시적 override는 그대로 가능 - 4-2 실험 스크립트 영향 없음)
+- [x] `tread_v2`의 ground_truth_mm은 None(캘리퍼 값 미확보) - `build_instance`가 이미 None-safe(`if gt is not None`)라 에러 없이 error_mm/error_pct만 None으로 빠짐, 실측 확인
+- [x] `6_insertion_check.py`의 `CENTER_OFFSET_THRESHOLD_MM`/`MAX_PLAUSIBLE_MATCH_MM`이 모듈 로드 시점에 한 번만 계산되던 버그 발견 → 함수(`center_offset_threshold_mm()`/`max_plausible_match_mm()`)로 전환, gt가 None이면 None 반환해 중심 판정을 보류로 처리
+- [x] `5_px_to_mm.py`/`6_insertion_check.py`/`7_realtime_detect.py`에 `--specimen` CLI 옵션 추가
+- [x] 회귀 테스트 재통과 확인(기본 프로파일 `foam_panel_v1`은 동작 완전 동일)
+- [x] 실카메라로 `--specimen tread_v2` 실행 - error_pct/ground_truth_mm이 전부 None으로 깔끔하게 나옴(크래시 없음)
+
+**결론**: 프로파일 분기 구조는 완성, 실카메라로도 검증됨. `CENTER_OFFSET_THRESHOLD_MM` 버그는 이번 리팩터링 과정에서 우연히 발견 - 프로파일 없이 나뒀으면 `--specimen` 전환 후에도 계속 foam_panel_v1 기준값으로 잘못 판정했을 것.
+
+**보완 필요**: (1) `tread_v2`의 캘리퍼 값 확보 - 오목한 구멍 특성상 기존 측정법이 안 맞아서 다른 측정 방법(개구부 림만 재기 등) 필요, 아직 미해결. (2) stud_hole 지름 6~16mm 편차가 진짜 이 시편 특성인지 오탐인지 육안 확인 필요. (3) 나사 1개 완전 미검출 원인(area/solidity 파라미터 vs 조명/반사 차이) 아직 미확정 - 이건 파라미터로 풀릴지 재학습이 필요할지도 불명확.

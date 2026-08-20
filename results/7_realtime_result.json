@@ -4,297 +4,297 @@
       "class": "screw_head",
       "confidence": 1.0,
       "center_px": [
-        402.8,
-        261.7
+        496.2,
+        261.3
       ],
-      "diameter_px": 17.11,
-      "depth_mm": 278.0,
+      "diameter_px": 15.8,
+      "depth_mm": 294.0,
       "depth_source": "mask",
-      "diameter_mm": 5.256,
-      "ground_truth_mm": 6.0,
-      "error_mm": -0.744,
-      "error_pct": -12.4,
-      "aspect_ratio": 1.32,
+      "diameter_mm": 5.131,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "aspect_ratio": 1.25,
       "tilt_status": "정상",
-      "local_panel_depth_mm": 280.0,
-      "protrusion_mm": 2.03,
+      "local_panel_depth_mm": 296.0,
+      "protrusion_mm": 1.99,
       "center_offset_mm": null,
       "final_status": "정상",
       "tilt_reasons": [],
-      "match_rejected": true
+      "match_rejected": false
     },
     {
       "class": "screw_head",
       "confidence": 1.0,
       "center_px": [
-        787.7,
-        299.8
+        867.0,
+        293.8
       ],
-      "diameter_px": 21.05,
-      "depth_mm": 263.0,
+      "diameter_px": 20.56,
+      "depth_mm": 273.0,
       "depth_source": "mask",
-      "diameter_mm": 6.117,
-      "ground_truth_mm": 6.0,
-      "error_mm": 0.117,
-      "error_pct": 1.9,
-      "aspect_ratio": 1.16,
+      "diameter_mm": 6.201,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "aspect_ratio": 1.13,
       "tilt_status": "정상",
-      "local_panel_depth_mm": 271.9,
-      "protrusion_mm": 8.85,
+      "local_panel_depth_mm": 281.9,
+      "protrusion_mm": 8.91,
       "center_offset_mm": null,
       "final_status": "정상",
       "tilt_reasons": [],
-      "match_rejected": true
+      "match_rejected": false
     },
     {
       "class": "screw_head",
       "confidence": 1.0,
       "center_px": [
-        706.3,
-        473.7
+        783.8,
+        471.8
       ],
-      "diameter_px": 20.68,
+      "diameter_px": 22.65,
       "depth_mm": 281.0,
       "depth_source": "mask",
-      "diameter_mm": 6.422,
-      "ground_truth_mm": 6.0,
-      "error_mm": 0.422,
-      "error_pct": 7.0,
-      "aspect_ratio": 2.13,
+      "diameter_mm": 7.033,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "aspect_ratio": 1.93,
       "tilt_status": "틀어짐",
-      "local_panel_depth_mm": 282.6,
-      "protrusion_mm": 1.56,
+      "local_panel_depth_mm": 283.3,
+      "protrusion_mm": 2.25,
       "center_offset_mm": null,
       "final_status": "틀어짐",
       "tilt_reasons": [
         "각도"
       ],
-      "match_rejected": true
+      "match_rejected": false
     }
   ],
   "stud_holes": [
     {
       "class": "stud_hole",
-      "confidence": 0.767,
+      "confidence": 0.806,
       "center_px": [
-        318.8,
-        310.4
+        412.8,
+        308.1
       ],
-      "diameter_px": 39.11,
-      "depth_mm": 286.0,
+      "diameter_px": 34.15,
+      "depth_mm": 300.0,
       "depth_source": "mask",
-      "diameter_mm": 11.838,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.838,
-      "error_pct": 18.4,
+      "diameter_mm": 10.868,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
       "rect_residual_px": 1.71,
       "rect_coverage": 0.99
     },
     {
       "class": "stud_hole",
-      "confidence": 0.664,
+      "confidence": 0.72,
       "center_px": [
-        1019.8,
-        248.9
+        416.9,
+        419.9
       ],
-      "diameter_px": 38.82,
-      "depth_mm": 265.0,
+      "diameter_px": 34.28,
+      "depth_mm": 299.0,
       "depth_source": "mask",
-      "diameter_mm": 11.751,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.751,
-      "error_pct": 17.5,
-      "rect_residual_px": 1.52,
+      "diameter_mm": 10.908,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.89,
       "rect_coverage": 0.99
     },
     {
       "class": "stud_hole",
-      "confidence": 0.592,
+      "confidence": 0.669,
       "center_px": [
-        709.8,
-        159.7
+        497.5,
+        484.8
       ],
-      "diameter_px": 40.45,
-      "depth_mm": 269.0,
+      "diameter_px": 37.6,
+      "depth_mm": 295.0,
       "depth_source": "mask",
-      "diameter_mm": 12.242,
-      "ground_truth_mm": 10.0,
-      "error_mm": 2.242,
-      "error_pct": 22.4,
-      "rect_residual_px": 2.0,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.579,
-      "center_px": [
-        896.9,
-        427.1
-      ],
-      "diameter_px": 38.02,
-      "depth_mm": 275.0,
-      "depth_source": "mask",
-      "diameter_mm": 11.507,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.507,
-      "error_pct": 15.1,
-      "rect_residual_px": 1.66,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.524,
-      "center_px": [
-        898.4,
-        237.5
-      ],
-      "diameter_px": 39.7,
-      "depth_mm": 267.0,
-      "depth_source": "mask",
-      "diameter_mm": 12.015,
-      "ground_truth_mm": 10.0,
-      "error_mm": 2.015,
-      "error_pct": 20.2,
-      "rect_residual_px": 1.61,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.521,
-      "center_px": [
-        1010.5,
-        401.2
-      ],
-      "diameter_px": 39.19,
-      "depth_mm": 272.0,
-      "depth_source": "mask",
-      "diameter_mm": 11.86,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.86,
-      "error_pct": 18.6,
-      "rect_residual_px": 1.73,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.514,
-      "center_px": [
-        509.2,
-        294.7
-      ],
-      "diameter_px": 37.5,
-      "depth_mm": 280.0,
-      "depth_source": "mask",
-      "diameter_mm": 11.351,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.351,
-      "error_pct": 13.5,
-      "rect_residual_px": 1.46,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.395,
-      "center_px": [
-        790.8,
-        402.6
-      ],
-      "diameter_px": 35.7,
-      "depth_mm": 278.0,
-      "depth_source": "mask",
-      "diameter_mm": 10.806,
-      "ground_truth_mm": 10.0,
-      "error_mm": 0.806,
-      "error_pct": 8.1,
-      "rect_residual_px": 1.77,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.381,
-      "center_px": [
-        332.4,
-        426.3
-      ],
-      "diameter_px": 34.89,
-      "depth_mm": 292.0,
-      "depth_source": "mask",
-      "diameter_mm": 10.56,
-      "ground_truth_mm": 10.0,
-      "error_mm": 0.56,
-      "error_pct": 5.6,
-      "rect_residual_px": 2.01,
-      "rect_coverage": 0.98
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.346,
-      "center_px": [
-        419.9,
-        486.0
-      ],
-      "diameter_px": 40.97,
-      "depth_mm": 292.0,
-      "depth_source": "mask",
-      "diameter_mm": 12.401,
-      "ground_truth_mm": 10.0,
-      "error_mm": 2.401,
-      "error_pct": 24.0,
-      "rect_residual_px": 1.71,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.335,
-      "center_px": [
-        611.7,
-        390.9
-      ],
-      "diameter_px": 37.55,
-      "depth_mm": 283.0,
-      "depth_source": "mask",
-      "diameter_mm": 11.364,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.364,
-      "error_pct": 13.6,
-      "rect_residual_px": 1.59,
-      "rect_coverage": 0.99
-    },
-    {
-      "class": "stud_hole",
-      "confidence": 0.296,
-      "center_px": [
-        598.6,
-        276.2
-      ],
-      "diameter_px": 39.36,
-      "depth_mm": 277.0,
-      "depth_source": "mask",
-      "diameter_mm": 11.914,
-      "ground_truth_mm": 10.0,
-      "error_mm": 1.914,
-      "error_pct": 19.1,
+      "diameter_mm": 11.966,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
       "rect_residual_px": 1.58,
       "rect_coverage": 0.99
     },
     {
       "class": "stud_hole",
-      "confidence": 0.26,
+      "confidence": 0.629,
       "center_px": [
-        526.8,
-        431.1
+        1091.8,
+        252.2
       ],
-      "diameter_px": 35.51,
+      "diameter_px": 36.02,
+      "depth_mm": 275.0,
+      "depth_source": "mask",
+      "diameter_mm": 11.462,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.65,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.588,
+      "center_px": [
+        592.7,
+        295.3
+      ],
+      "diameter_px": 38.21,
+      "depth_mm": 293.0,
+      "depth_source": "mask",
+      "diameter_mm": 12.159,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.66,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.57,
+      "center_px": [
+        1091.2,
+        400.1
+      ],
+      "diameter_px": 36.87,
+      "depth_mm": 274.0,
+      "depth_source": "mask",
+      "diameter_mm": 11.731,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.53,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.567,
+      "center_px": [
+        789.1,
+        167.8
+      ],
+      "diameter_px": 37.81,
       "depth_mm": 287.0,
       "depth_source": "mask",
-      "diameter_mm": 10.748,
-      "ground_truth_mm": 10.0,
-      "error_mm": 0.748,
-      "error_pct": 7.5,
-      "rect_residual_px": 1.83,
+      "diameter_mm": 12.033,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.58,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.52,
+      "center_px": [
+        977.8,
+        426.8
+      ],
+      "diameter_px": 37.07,
+      "depth_mm": 278.0,
+      "depth_source": "mask",
+      "diameter_mm": 11.796,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.76,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.383,
+      "center_px": [
+        974.4,
+        239.2
+      ],
+      "diameter_px": 32.88,
+      "depth_mm": 280.0,
+      "depth_source": "mask",
+      "diameter_mm": 10.462,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.37,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.349,
+      "center_px": [
+        682.6,
+        276.8
+      ],
+      "diameter_px": 35.69,
+      "depth_mm": 290.0,
+      "depth_source": "mask",
+      "diameter_mm": 11.359,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.61,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.308,
+      "center_px": [
+        867.6,
+        400.1
+      ],
+      "diameter_px": 34.48,
+      "depth_mm": 282.0,
+      "depth_source": "mask",
+      "diameter_mm": 10.974,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.51,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.304,
+      "center_px": [
+        606.3,
+        428.0
+      ],
+      "diameter_px": 34.65,
+      "depth_mm": 292.0,
+      "depth_source": "mask",
+      "diameter_mm": 11.027,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.48,
+      "rect_coverage": 0.99
+    },
+    {
+      "class": "stud_hole",
+      "confidence": 0.271,
+      "center_px": [
+        693.6,
+        385.3
+      ],
+      "diameter_px": 35.49,
+      "depth_mm": 290.0,
+      "depth_source": "mask",
+      "diameter_mm": 11.293,
+      "ground_truth_mm": null,
+      "error_mm": null,
+      "error_pct": null,
+      "rect_residual_px": 1.49,
       "rect_coverage": 0.99
     }
   ],
   "consistent_fast_pass": true,
-  "elapsed_sec": 1.69
+  "elapsed_sec": 1.84
 }

@@ -234,7 +234,10 @@ def main():
                          help="지정하면 정지판정/MEASURING 없이 WAITING 라이브 오버레이만 이 초만큼 "
                               "돌리면서 매 갱신 프레임을 results/8_live_demo/에 저장 - 라이브 검출이 "
                               "실제로 동작하는지 스크린샷으로 증명하기 위한 디버그 모드")
+    parser.add_argument("--specimen", default="foam_panel_v1", choices=list(dc.SPECIMEN_PROFILES),
+                         help="시편 프로파일 선택 - 캘리퍼 값/depth 범위/나사 검출 파라미터가 시편마다 다름")
     args = parser.parse_args()
+    dc.set_profile(args.specimen)
 
     pipeline, align, depth_scale = build_pipeline()
     filters = build_filters()
