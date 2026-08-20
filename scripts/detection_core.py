@@ -30,19 +30,42 @@ SPECIMEN_PROFILES = {
         "screw_min_solidity": 0.75,
         "screw_tilt_aspect_ratio": 1.5,
         "screw_max_aspect_ratio": 2.5,
+        # stud_hole 오탐 제거용 지름 타당성 필터: 실측(2026-08-20)으로 confidence가 낮을수록
+        # 지름 오차%도 같이 커지는 상관관계를 확인했으나, confidence만으로 자르면 conf=0.213인데
+        # 오차 2.4%인 좋은 검출까지 같이 날아감 - 대신 이미 아는 시편 스펙(10mm)에서 이 비율(%)
+        # 이상 벗어나는 지름만 오탐으로 간주해 제외. 실측 데이터 기준 25%로 설정하면 진짜 오탐
+        # 3개(오차 +33.4%/+27.1%/-23.5%, 전부 conf<0.24)만 정확히 걸러지고 나머지(최대 오차
+        # 20.3%)는 유지됨.
+        "stud_hole_diameter_tolerance_pct": 25,
+        # 덜박힘(protrusion) 임계값: 누적 표본 53개(6_protrusion_baseline.json, 2026-08-20)가
+        # ~2~4.7mm 구간(37개)과 ~7.4~9.5mm 구간(16개)으로 뚜렷이 갈리고 그 사이(4.74~7.44mm)엔
+        # 값이 하나도 없어서, 그 빈 구간 한가운데인 5mm를 이 시편 전용 고정값으로 확정(사용자
+        # 확인). 주의: 이 53개가 서로 다른 나사가 아니라 같은 시편의 나사 몇 개를 반복 측정한
+        # 값이라, "진짜 불량이라 9mm대인지 이 시편 특유의 정상 편차인지"까지는 확정 못 함 -
+        # 그래도 상대적 이상치 기준으로는 근거가 있다고 판단해 채택.
+        "protrusion_threshold_mm": 5.0,
     },
-    "tread_v2": {  # 2026-08-20 시도한 다른 트레드 시편 - 구멍이 90도로 꺾인 게 아니라
-        # 오목(concave)하게 들어가 있어서 기존 방식의 캘리퍼 측정이 애매함(사용자 확인) ->
-        # 캘리퍼 값 확보 전까지 ground_truth는 None으로 둠. build_instance가 gt=None이면
-        # error_mm/error_pct를 그냥 건너뛰므로(기존 코드 경로 그대로) 에러 없이 동작함 -
-        # 대신 diameter_mm(실측 mm 추정치) 자체는 그대로 나오니 그 값과 실제 구멍을 비교해
-        # 정성적으로 판단하거나, 이후 다른 방식(예: 개구부 림 지름만 캘리퍼로 재기)으로 채울 것.
-        "ground_truth_mm": {"screw_head": None, "stud_hole": None},
+    "tread_v2": {  # 2026-08-20 시도한 다른 트레드(사각 타일형) 시편.
+        # 캘리퍼 실측 확보(2026-08-20): 나사머리 지름 10mm. stud_hole은 구멍이 오목(concave)해서
+        # 기존 방식으로 재기 애매함(사용자 확인) - 캘리퍼 값 확보 전까지 None으로 둠
+        # (build_instance가 gt=None이면 error_mm/error_pct만 건너뛰고 diameter_mm 자체는 정상 산출).
+        #
+        # 이 시편에 나사 4개 존재, 사용자가 확인한 실제 상태(검증용 정답 - 결과 비교 기준):
+        #   틀어짐 1개 / 정상 2개 / 덜박힘 1개
+        # -> 이 프로젝트 최초로 확보한 "진짜 덜박힘" 양성 샘플. foam_panel_v1은 진짜 양성 샘플이
+        # 없어 상대적 이상치(관측 데이터의 빈 구간)로 5mm를 잠정 채택했던 것과 달리, 여기서는
+        # 실제 측정된 protrusion_mm으로 임계값을 검증/확정할 수 있음.
+        "ground_truth_mm": {"screw_head": 10.0, "stud_hole": None},
         "depth_range_mm": (180, 400),  # 실측 depth 258~272mm로 기존 범위 안이라 일단 재사용
         "screw_area_px": (100, 4000),  # 나사 1개 미검출 원인일 수 있음 - 재조정 필요(미확정)
         "screw_min_solidity": 0.75,
         "screw_tilt_aspect_ratio": 1.5,
         "screw_max_aspect_ratio": 2.5,
+        # stud_hole ground_truth_mm이 None이라 아래 필터는 자동으로 적용 안 됨(비교 기준이 없음) -
+        # 캘리퍼 값 확보되면 foam_panel_v1처럼 값 채울 것.
+        "stud_hole_diameter_tolerance_pct": None,
+        # 실측 검증 전까지 통계적 폴백(정상 표본 평균+3표준편차) 사용 - 아래 실측 후 확정 예정.
+        "protrusion_threshold_mm": None,
     },
 }
 
@@ -225,6 +248,48 @@ def deduplicate_instances(instances, dist_ratio=0.6):
     if n_removed:
         print(f"중복 제거: {n_removed}개 (같은 구멍/나사로 판단해 confidence 낮은 쪽 제외)")
     return kept
+
+
+def suppress_occupied_holes(stud_holes, screw_instances, fx, margin_mm=3.0, debug_label=None):
+    """나사머리 근처(나사 반지름+margin_mm 이내)에 검출된 stud_hole은 '그 나사가 앉아있는
+    구멍'으로 보고 목록에서 제외 - 같은 자리가 "빈 구멍"과 "나사"로 동시에 표시되는 중복을 막음.
+
+    실측(2026-08-20, 다른 시편으로 필드 테스트 중)으로 발견: 나사가 기울어지면(틀어짐) 구멍
+    테두리가 더 많이 노출돼서 stud_hole 모델이 그 노출된 테두리를 보고 같은 자리를 빈 구멍으로도
+    오탐하는 사례 확인됨 - 정상(거의 안 기운) 나사 자리에선 이 중복이 안 보이는 것과 일치."""
+    if not stud_holes or not screw_instances:
+        return stud_holes
+    kept = []
+    for hole in stud_holes:
+        hx, hy = hole["center_px"]
+        occupied = False
+        for screw in screw_instances:
+            sx, sy = screw["center_px"]
+            dist_px = np.hypot(hx - sx, hy - sy)
+            depth_ref = screw.get("depth_mm") or hole.get("depth_mm")
+            if not depth_ref:
+                continue
+            dist_mm = dist_px * depth_ref / fx
+            if dist_mm <= (screw["diameter_mm"] / 2) + margin_mm:
+                occupied = True
+                break
+        if occupied:
+            continue
+        kept.append(hole)
+    n_removed = len(stud_holes) - len(kept)
+    if n_removed and debug_label:
+        print(f"  [{debug_label}] 나사와 겹치는 stud_hole {n_removed}개 제외 (같은 구멍 중복 표시 방지)")
+    return kept
+
+
+def clamp_text_origin(x, y, text, img_w, img_h, font=cv2.FONT_HERSHEY_SIMPLEX,
+                       font_scale=0.4, thickness=1, margin=4):
+    """cv2.putText 좌표가 이미지 밖으로 나가지 않도록 보정 - 가장자리에 걸친 구멍/나사 라벨이
+    화면 밖으로 잘려나가는 문제(실측으로 발견) 방지용. 5/6/7번 시각화 공용."""
+    (tw, th), _ = cv2.getTextSize(text, font, font_scale, thickness)
+    x = max(margin, min(int(x), img_w - tw - margin))
+    y = max(th + margin, min(int(y), img_h - margin))
+    return x, y
 
 
 def build_instance(mask_bool, cls_name, conf, depth_mm, fx, debug_label=None, **extra):
@@ -464,6 +529,15 @@ def detect_stud_holes(color_img, depth_mm, intr, debug_label="stud_hole"):
             if gt is not None:
                 inst["error_mm"] = round(diam_mm - gt, 3)
                 inst["error_pct"] = round((diam_mm - gt) / gt * 100, 1)
+                tol_pct = current_profile().get("stud_hole_diameter_tolerance_pct")
+                if tol_pct is not None and abs(diam_mm - gt) / gt * 100 > tol_pct:
+                    # 지름 타당성 필터: confidence만으론 오탐/정탐이 잘 안 갈리는 게 실측으로
+                    # 확인됨(낮은 confidence인데 오차 작은 정탐도 있었음) - 대신 이미 아는 시편
+                    # 스펙에서 너무 벗어나는 지름은 YOLO 마스크 자체가 잘못 잡힌 오탐으로 간주.
+                    if debug_label:
+                        print(f"  [{debug_label}] 제외: 지름={diam_mm:.1f}mm이 예상({gt}mm) 대비 "
+                              f"{abs(diam_mm - gt) / gt * 100:.0f}% 벗어남 (오탐 추정, conf={conf:.2f})")
+                    continue
             inst["rect_residual_px"] = fitted["rect_residual_px"]
             inst["rect_coverage"] = fitted["rect_coverage"]
             instances.append(inst)
