@@ -9,9 +9,9 @@
 # 결과물(특히 사진)은 3-1, 3-3처럼 하위 단계 번호로 토글(접기/펼치기)을 만들어서 특정 단계 결과만 펼쳐볼 수 있게 정리한다
 # 8/21일까지 완료해야되는 과제 순서 
 
-1.시편 3개, 측정거리 25cm(250mm)
-2.Object Detection / Semantic Segmentation 차이 간단하게 공부
-3. Depth Frame(Map) 전처리
+1.시편 3개, 측정거리 25cm(250mm) (o)
+2.Object Detection / Semantic Segmentation 차이 간단하게 공부 (o)
+3. Depth Frame(Map) 전처리 (o)
 4.Segmentation으로 나사머리 영역학습 및 추론
 5. px to mm 통해서 각 나사머리 / 스터드홀 지름 확인하기
 6. 삽입 불량 판단 해보기. Center 기준으로 (x,y) 얼마나 틀어졌는지.

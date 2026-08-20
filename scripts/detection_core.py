@@ -96,7 +96,7 @@ def blob_aspect_ratio(mask_bool):
 
 
 def detect_screw_heads_by_color(color_img, min_area_px=100, max_area_px=4000,
-                                 min_solidity=0.75, tilt_aspect_ratio=1.3, max_aspect_ratio=2.5):
+                                 min_solidity=0.75, tilt_aspect_ratio=1.5, max_aspect_ratio=2.5):
     """금속 나사머리는 은색(밝음, 무채색) vs 무광 검은 배경 - 명도 대비가 커서
     학습 없이 밝기 임계값(Otsu, 이미지마다 자동 적응)만으로 검출.
     YOLO screw_head가 학습 데이터 부족으로 불안정한 것의 대안.

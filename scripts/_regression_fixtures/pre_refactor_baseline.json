@@ -7,7 +7,7 @@
     },
     {
       "aspect_ratio": 1.49,
-      "status": "틀어짐",
+      "status": "정상",
       "area": 216
     },
     {
@@ -37,7 +37,7 @@
     },
     {
       "aspect_ratio": 1.41,
-      "status": "틀어짐",
+      "status": "정상",
       "area": 170
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "aspect_ratio": 1.4,
-      "status": "틀어짐",
+      "status": "정상",
       "area": 491
     },
     {
@@ -99,7 +99,7 @@
       "error_mm": 1.603,
       "error_pct": 26.7,
       "aspect_ratio": 1.49,
-      "insertion_status": "틀어짐"
+      "insertion_status": "정상"
     },
     {
       "class": "screw_head",
@@ -201,7 +201,7 @@
       "error_mm": 0.912,
       "error_pct": 15.2,
       "aspect_ratio": 1.41,
-      "insertion_status": "틀어짐"
+      "insertion_status": "정상"
     },
     {
       "class": "screw_head",
@@ -252,7 +252,7 @@
       "error_mm": 5.824,
       "error_pct": 97.1,
       "aspect_ratio": 1.4,
-      "insertion_status": "틀어짐"
+      "insertion_status": "정상"
     },
     {
       "class": "screw_head",

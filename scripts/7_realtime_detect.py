@@ -1,10 +1,11 @@
 """
-7번: 실시간 삽입 불량 검출 - 정지 감지 후 자동 캡처 방식
+7번: 실시간 삽입 불량 검출 - 정지 감지 후 자동 캡처 방식 + 이동 중 라이브 미리보기
 - 카메라는 고정, 시편은 사람이 옮겨가며 놓는다는 전제(사용자 확인 완료)
-- depth 프레임간 변화량으로 "정지"를 감지해 그 순간에만 기존 검증된 30(->15)프레임 평균
-  + YOLO + 색상검출 + mm/틀어짐/덜박힘 파이프라인(detection_core.py, 6_insertion_check.py)을
-  그대로 실행 - 매 프레임 재추론하지 않음 (실사용 워크플로우에 맞고, 결과 신뢰도도 정적
-  캡처 방식과 동일하게 유지됨)
+- 정식 측정(mm/틀어짐/덜박힘, baseline 누적)은 depth 프레임간 변화량으로 "정지"를 감지한
+  순간에만 기존 검증된 30(->15)프레임 평균 + YOLO + 색상검출 파이프라인(detection_core.py,
+  6_insertion_check.py)을 그대로 실행 - 정확도는 정적 캡처 방식과 동일하게 유지됨
+- 시편이 움직이는 중(WAITING/SETTLING)에도 단일 프레임 기준 라이브 검출 오버레이를 보여줌
+  (LIVE_DETECT_EVERY_N_FRAMES마다 갱신) - mm 값은 참고용, baseline엔 반영 안 됨
 
 상태머신: WAITING -> SETTLING -> MEASURING -> RESULT_SHOWN -> (모션 재감지) -> WAITING
 
@@ -62,6 +63,11 @@ STUD_HOLE_COUNT_TOLERANCE = 1  # 두 버스트 stud_hole 개수 차이가 이 �
 # 첫 diff가 과대하게 나올 수 있음(실측으로 재측정 루프가 도는 게 확인돼 추가) - 복귀 후
 # 이 프레임 수만큼은 diff를 구해도 debounce 카운터에 반영하지 않고 버림(필터 재안정화 유예).
 POST_MEASURE_COOLDOWN_FRAMES = 20
+# WAITING/SETTLING(시편이 움직이는 중)에도 라이브 검출 오버레이를 보여주기 위한 설정.
+# YOLO+평면보정 한 번에 ~60~120ms 걸려서 매 프레임 돌리면 모션감지 루프(diff 계산)가
+# 느려져 SETTLE_FRAMES 타이밍이 틀어짐 - 그래서 모션 diff는 매 프레임 계산하되, 무거운
+# 검출은 이 프레임 수마다 한 번만 갱신(그 사이엔 마지막 결과를 그대로 화면에 유지).
+LIVE_DETECT_EVERY_N_FRAMES = 5
 
 
 class State(Enum):
@@ -130,6 +136,42 @@ def run_measurement(pipeline, align, filters, depth_scale, intr, baseline):
     return color_img, results, stud_holes, baseline, threshold, consistent
 
 
+def detect_live(color_img, depth_mm, intr):
+    """WAITING/SETTLING(시편 이동 중)용 - 단일 프레임 기준 라이브 검출.
+    MEASURING의 15/30프레임 평균보다 노이즈가 커서 mm 값은 참고용일 뿐 - 정식 측정치는
+    정지 후 MEASURING에서만 신뢰. classify_insertion(baseline 누적/판정)은 호출하지 않음 -
+    초당 여러 번 돌면 protrusion 표본이 순식간에 오염됨."""
+    fx = intr["fx"]
+    screw_dets = dc.detect_screw_heads_by_color(color_img)
+    screw_instances = []
+    for det in screw_dets:
+        inst = dc.build_instance(det["mask"], "screw_head", 1.0, depth_mm, fx,
+                                  aspect_ratio=det["aspect_ratio"], insertion_status=det["status"])
+        if inst:
+            screw_instances.append(inst)
+    stud_holes = dc.detect_stud_holes(color_img, depth_mm, intr, debug_label=None)
+    return screw_instances, stud_holes
+
+
+def render_live_overlay(color_img, screw_instances, stud_holes, status):
+    vis = color_img.copy()
+    for hole in stud_holes:
+        hx, hy = hole["center_px"]
+        hr_px = int(hole["diameter_px"] / 2)
+        cv2.circle(vis, (int(hx), int(hy)), hr_px, (0, 255, 255), 1)
+    for inst in screw_instances:
+        cx, cy = inst["center_px"]
+        r_px = int(inst["diameter_px"] / 2)
+        is_tilted = inst.get("insertion_status") == "틀어짐"
+        color = (0, 0, 255) if is_tilted else (0, 255, 0)
+        cv2.circle(vis, (int(cx), int(cy)), r_px, color, 2)
+    cv2.rectangle(vis, (0, 0), (vis.shape[1], 30), (0, 0, 0), -1)
+    cv2.putText(vis, status, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1, cv2.LINE_AA)
+    cv2.putText(vis, "라이브 미리보기(참고용, 정밀 측정 아님)", (10, vis.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 255), 1, cv2.LINE_AA)
+    return vis
+
+
 def render_result(color_img, results, stud_holes, status_text=None):
     vis = color_img.copy()
     for hole in stud_holes:
@@ -178,6 +220,8 @@ def main():
     debounce_counter = 0
     cooldown_counter = 0
     result_vis = None
+    live_frame_counter = 0
+    live_screw_instances, live_stud_holes = [], []
 
     print("7번 실시간 검출 시작 - q로 종료" + (" (--once: 첫 측정 후 자동 종료)" if args.once else ""))
     print(f"모션 임계값(시작값)={MOTION_DIFF_THRESHOLD_MM}mm, 정지확인={SETTLE_FRAMES}프레임")
@@ -207,9 +251,14 @@ def main():
                     state = State.WAITING
 
                 status = f"[{state.name}] diff={diff:.1f}mm settle={settle_counter}/{SETTLE_FRAMES}"
-                preview = color_img.copy()
-                cv2.rectangle(preview, (0, 0), (preview.shape[1], 30), (0, 0, 0), -1)
-                cv2.putText(preview, status, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1, cv2.LINE_AA)
+
+                # 시편이 움직이는 중에도 라이브 검출 - 무거운 검출은 N프레임마다만 갱신
+                # (매 프레임 돌리면 diff 계산 루프가 느려져 SETTLE_FRAMES 타이밍이 틀어짐).
+                live_frame_counter += 1
+                if live_frame_counter >= LIVE_DETECT_EVERY_N_FRAMES:
+                    live_frame_counter = 0
+                    live_screw_instances, live_stud_holes = detect_live(color_img, depth_mm, intr)
+                preview = render_live_overlay(color_img, live_screw_instances, live_stud_holes, status)
                 cv2.imshow("realtime_detect", preview)
 
                 if settle_counter >= SETTLE_FRAMES:
@@ -267,6 +316,8 @@ def main():
                         print("모션 재감지 - 대기 상태로 복귀")
                         state = State.WAITING
                         debounce_counter = 0
+                        live_screw_instances, live_stud_holes = [], []  # 이전 시편의 잔상 표시 방지
+                        live_frame_counter = 0
                 prev_depth_mm = depth_mm
 
             key = cv2.waitKey(1) & 0xFF
