@@ -1,0 +1,14 @@
+{
+  "_note": "2026-08-20 사용자 실측 라벨링. color.png/depth_mm.npy와 짝을 이루는 고정 정답지 - 카메라 없이 반복 평가용(eval_tread_v2_fixture.py). 나사 위치는 근사 좌표(approx_center_px) - 매칭은 최근접 거리로 함.",
+  "screws": [
+    {"approx_center_px": [400, 186], "true_status": "덜박힘", "note": "좌상단 육각머리 나사"},
+    {"approx_center_px": [1150, 215], "true_status": "틀어짐", "note": "우상단 육각머리 나사 - 현재 색상검출기가 후보로도 못 잡음(반사/가장자리 추정), 최우선 해결 대상"},
+    {"approx_center_px": [674, 349], "true_status": "정상"},
+    {"approx_center_px": [1001, 523], "true_status": "정상"}
+  ],
+  "known_false_positive_regions": [
+    {"approx_center_px": [1249, 417], "reason": "화면 우측 모니터 화면(코드에디터) 반사/밝은 아이콘으로 추정 - ar=2.35로 검출됨"},
+    {"approx_center_px": [1210, 489], "reason": "위와 동일 영역 - ar=1.92로 검출됨"}
+  ],
+  "match_radius_px": 60
+}

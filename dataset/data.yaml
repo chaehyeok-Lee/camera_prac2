@@ -1,7 +1,9 @@
 path: C:/Users/pc/Desktop/tire/dataset
-train: train.txt   # 11장
-val: val.txt        # 3장 (specimen1_009/010, specimen2_004) - 진짜 held-out, train과 겹치지 않음
-                     # 14장뿐이라 val 지표 통계적 신뢰도는 낮지만, train=val 중복(암기 확인)은 벗어남
+train: train.txt   # 13장 (specimen1/2 11장 + specimen3 2장)
+val: val.txt        # 4장 (specimen1_009/010, specimen2_004, specimen3_003) - 진짜 held-out, train과 겹치지 않음
+                     # 17장뿐이라 val 지표 통계적 신뢰도는 낮지만, train=val 중복(암기 확인)은 벗어남
+                     # specimen3(tread_v3, V자 홈 트레드) 2026-08-21 추가 - 기존 모델이 문양을
+                     # 구멍으로 오탐하는 문제 해결 시도(사람이 직접 라벨링, 모델 미검출 홀 1개 포함)
 
 names:
   0: screw_head

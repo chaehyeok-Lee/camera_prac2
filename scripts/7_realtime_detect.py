@@ -131,7 +131,7 @@ def run_measurement(pipeline, align, filters, depth_scale, intr, baseline):
               f"screw={len(screw_dets)}/{len(screw_dets2)}) - 30프레임으로 재측정")
         depth_mm, color_img, fx, screw_dets, stud_holes = one_pass(MEASURE_N_FRAMES_FALLBACK, warmup=0)
 
-    results, baseline, threshold = insertion.classify_insertion(
+    results, stud_holes, baseline, threshold = insertion.classify_insertion(
         screw_dets, stud_holes, depth_mm, fx, baseline)
     return color_img, results, stud_holes, baseline, threshold, consistent
 
@@ -150,6 +150,7 @@ def detect_live(color_img, depth_mm, intr):
         if inst:
             screw_instances.append(inst)
     stud_holes = dc.detect_stud_holes(color_img, depth_mm, intr, debug_label=None)
+    stud_holes = dc.suppress_occupied_holes(stud_holes, screw_instances, fx)
     return screw_instances, stud_holes
 
 
@@ -205,20 +206,22 @@ def run_live_demo(pipeline, align, filters, depth_scale, intr, duration_sec):
 
 def render_result(color_img, results, stud_holes, status_text=None):
     vis = color_img.copy()
+    vh, vw = vis.shape[:2]
     for hole in stud_holes:
         hx, hy = hole["center_px"]
         hr_px = int(hole["diameter_px"] / 2)
         cv2.circle(vis, (int(hx), int(hy)), hr_px, (0, 255, 255), 2)
-        cv2.putText(vis, f"hole {hole['diameter_mm']}mm", (int(hx) - 35, int(hy) + hr_px + 15),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1, cv2.LINE_AA)
+        text = f"hole {hole['diameter_mm']}mm"
+        tx, ty = dc.clamp_text_origin(hx - 35, hy + hr_px + 15, text, vw, vh, font_scale=0.35)
+        cv2.putText(vis, text, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1, cv2.LINE_AA)
     for inst in results:
         cx, cy = inst["center_px"]
         r_px = int(inst["diameter_px"] / 2)
         color = (0, 0, 255) if inst["final_status"] != "정상" else (0, 255, 0)
         cv2.circle(vis, (int(cx), int(cy)), r_px, color, 2)
         label = f"{inst['final_status']} prot={inst['protrusion_mm']}mm"
-        cv2.putText(vis, label, (int(cx) - 50, int(cy) - r_px - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
+        tx, ty = dc.clamp_text_origin(cx - 50, cy - r_px - 5, label, vw, vh, font_scale=0.4)
+        cv2.putText(vis, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
     if status_text:
         cv2.rectangle(vis, (0, 0), (vis.shape[1], 40), (0, 0, 0), -1)
         cv2.putText(vis, status_text, (10, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)

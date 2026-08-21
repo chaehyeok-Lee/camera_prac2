@@ -44,6 +44,14 @@ SPECIMEN_PROFILES = {
         # 값이라, "진짜 불량이라 9mm대인지 이 시편 특유의 정상 편차인지"까지는 확정 못 함 -
         # 그래도 상대적 이상치 기준으로는 근거가 있다고 판단해 채택.
         "protrusion_threshold_mm": 5.0,
+        # 아래 둘은 None -> rectify_and_fit_circle의 전역 기본값(CIRCLE_FIT_MAX_RESIDUAL_PX=2.5,
+        # CIRCLE_FIT_MIN_COVERAGE=0.55) 그대로 사용 - 이미 검증된 이 시편 결과를 안 건드림.
+        "circle_fit_max_residual_px": None,
+        "circle_fit_min_coverage": None,
+        "stud_hole_min_diameter_mm": None,
+        # None -> 6_insertion_check.local_panel_depth_mm의 기존 기본 반경(45px/15px) 그대로 사용.
+        "protrusion_search_radius_px": None,
+        "protrusion_exclude_radius_px": None,
     },
     "tread_v2": {  # 2026-08-20 시도한 다른 트레드(사각 타일형) 시편.
         # 캘리퍼 실측 확보(2026-08-20): 나사머리 지름 10mm. stud_hole은 구멍이 오목(concave)해서
@@ -57,15 +65,85 @@ SPECIMEN_PROFILES = {
         # 실제 측정된 protrusion_mm으로 임계값을 검증/확정할 수 있음.
         "ground_truth_mm": {"screw_head": 10.0, "stud_hole": None},
         "depth_range_mm": (180, 400),  # 실측 depth 258~272mm로 기존 범위 안이라 일단 재사용
-        "screw_area_px": (100, 4000),  # 나사 1개 미검출 원인일 수 있음 - 재조정 필요(미확정)
+        # eval_tread_v2_fixture 라벨링 fixture로 실측(2026-08-20): 배경(모니터 반사로 추정,
+        # [1210,489] 부근) 오탐 후보의 블롭 면적이 1766px인데 실제 나사 3개(색상검출기가 후보로
+        # 잡은 것)는 480~595px - 이 오탐은 depth_range_mm 필터를 통과함(258mm로 시편 거리
+        # 범위 안이라 배경으로 못 거름 - 화면 속 물체가 실제로 이 거리 안에 있다고 추정) - 대신
+        # 면적 상한을 실제 나사 크기에 맞게 좁혀서 배제(1200px: 실제 나사 최대 595px에 넉넉한
+        # 여유를 두면서 오탐 1766px는 확실히 넘김).
+        "screw_area_px": (100, 1200),  # 나사 1개(우상단, 심하게 기울어짐) 여전히 미검출 - 아래 참고
         "screw_min_solidity": 0.75,
         "screw_tilt_aspect_ratio": 1.5,
         "screw_max_aspect_ratio": 2.5,
         # stud_hole ground_truth_mm이 None이라 아래 필터는 자동으로 적용 안 됨(비교 기준이 없음) -
         # 캘리퍼 값 확보되면 foam_panel_v1처럼 값 채울 것.
         "stud_hole_diameter_tolerance_pct": None,
-        # 실측 검증 전까지 통계적 폴백(정상 표본 평균+3표준편차) 사용 - 아래 실측 후 확정 예정.
-        "protrusion_threshold_mm": None,
+        # 실측(2026-08-20, eval_tread_v2_fixture 라벨 fixture)으로 확정: 이 프로젝트 최초의 진짜
+        # 덜박힘 양성 샘플([400,186])의 protrusion_mm을 두 정상 샘플과 비교 검증함. 주의 -
+        # 프로파일 기본 반경(45px/15px, foam_panel_v1과 공용)으로는 이 시편의 좌상단 코너 근처라
+        # 국소 평면 피팅 링이 시편 가장자리를 벗어나 배경까지 걸치면서 오차가 커져 순서 자체가
+        # 뒤집힘(반경을 넓힐수록 오히려 정상 샘플[674,349]의 protrusion이 덜박힘 샘플보다 커짐 -
+        # 반경 스윕으로 확인: 45px에서 덜박힘=2.79mm인데 정상=3.80mm로 역전). 아래
+        # protrusion_search/exclude_radius_px로 이 시편 전용 반경(20px/8px)을 좁혀써야
+        # 덜박힘(1.21mm) > 정상(0.66mm/0.46mm) 순서가 올바르게 나옴 - 그 반경 기준으로 중간값인
+        # 0.9mm를 임계값으로 채택. 표본이 덜박힘 1개/정상 2개뿐이라 여유폭이 넓지 않음(0.55mm) -
+        # 추가 덜박힘 샘플이 쌓이면 재검증 필요.
+        "protrusion_threshold_mm": 0.9,
+        # 2026-08-20 실측: 사용자가 화면에서 오탐 다수 확인 - 원 피팅 잔차/커버리지 기준을
+        # 기존(2.5px/0.55)보다 살짝 엄격하게(2.0px/0.6) 좁힘. 처음엔 1.2px/0.7로 훨씬 세게
+        # 조였다가 11개 후보가 전부 걸러져(0개 검출) 이 시편은 YOLO가 학습 안 된 패턴이라
+        # 원 피팅 자체가 foam_panel_v1보다 노이즈가 커서 그렇게까진 못 좁힌다는 걸 확인 -
+        # 완화해서 재조정함. 실제 구멍들이 ~10~12mm대로 몰려있는데 ~7.6mm짜리 하나만 뚝
+        # 떨어져 나온 걸 육안 확인해 절대 하한(9mm)도 추가 - 캘리퍼로 정확한 stud_hole 지름을
+        # 아직 못 재서 tolerance_pct 방식(foam_panel_v1처럼 %기반) 대신 절대값 하한으로 우선 처리.
+        "circle_fit_max_residual_px": 2.0,
+        "circle_fit_min_coverage": 0.6,
+        "stud_hole_min_diameter_mm": 9.0,
+        # 위 protrusion_threshold_mm 주석 참고 - 이 시편에서만 반경을 좁힘(6_insertion_check.
+        # classify_insertion이 local_panel_depth_mm 호출 시 이 값을 읽어씀. None인 프로파일은
+        # 기존 45px/15px 그대로 유지되어 foam_panel_v1 결과에 영향 없음).
+        "protrusion_search_radius_px": 20,
+        "protrusion_exclude_radius_px": 8,
+    },
+    "tread_v3": {  # 2026-08-21 도입한 세 번째 시편(V자/지그재그 홈이 있는 타이어 트레드 패턴,
+        # 캘리퍼 실측(2026-08-21, 사용자 확인): stud_hole은 90도로 꺾인 단차가 아니라 경사지게
+        # 좁아지는 원뿔형 구멍 - 바깥지름 15mm, 안지름 12mm. 즉 원 피팅이 어느 높이의 테두리를
+        # 잡느냐(바깥 쪽 넓은 테두리 vs 안쪽 좁은 테두리)에 따라 12~15mm 사이에서 자연스럽게
+        # 흩어지는 게 정상 - 이전에(경사 정보 모를 때) 관찰된 14.5~15.4mm대/10~13mm대 "두 그룹"은
+        # 서로 다른 구멍이나 오탐이 아니라 같은 원뿔형 구멍의 바깥/안쪽 테두리를 각각 잡은 것으로
+        # 재해석됨. ground_truth_mm은 두 값의 중간(13.5mm)으로 두고 아래 tolerance_pct로 그 폭을
+        # 감쌈(절대 하한 방식보다 원뿔 형상 자체를 근거로 하는 게 더 원리적).
+        "ground_truth_mm": {"screw_head": None, "stud_hole": 13.5},
+        "depth_range_mm": (180, 400),  # 실측 depth 중앙값 263mm(129~319mm 범위, 129는 홈
+        # 안쪽 반사로 추정되는 outlier) - 기존 범위 안이라 재사용
+        # 2026-08-21 실측 검증: 실제 나사 4개(area 263~419px, ar 1.03~1.78)가 기본값(다른 시편과
+        # 동일한 foam_panel_v1/tread_v2 초기값)으로 이미 전부 정확히 검출됨 - 배경(모니터 위
+        # 아이콘 2개, area 663/1155px)은 screw_area_px가 아니라 depth_range_mm 필터로 이미
+        # 걸러짐(시편 거리 범위 밖). tread_v2에서 겪은 "배경이 area 상한을 통과해 오탐되는" 문제가
+        # 이 시편에서는 재현되지 않아 area 상한을 별도로 좁힐 필요가 없었음 - 그래서 그대로 둠.
+        "screw_area_px": (100, 4000),
+        "screw_min_solidity": 0.75,
+        "screw_tilt_aspect_ratio": 1.5,
+        "screw_max_aspect_ratio": 2.5,
+        # 원뿔형 구멍이라 바깥(15mm)/안쪽(12mm) 테두리 둘 다 정탐인데, 중간(13.5mm) 기준으로
+        # 30%까지 허용하면 9.45~17.55mm를 다 포함(양쪽 물리적 끝값 12/15mm를 여유있게 감쌈).
+        # 실측(2026-08-21)으로 확인된 진짜 오탐 3개(5.88/6.91/8.995mm, confidence도 낮음)는
+        # 9.45mm 밑이라 이 폭으로도 확실히 제외됨 - 그래서 이전의 절대 하한(9.0mm) 방식을
+        # 대체함(원뿔 형상이라는 물리적 근거가 있는 이 방식이 임의 하한값보다 원리적).
+        "stud_hole_diameter_tolerance_pct": 30,
+        # foam_panel_v1과 동일하게 5.0mm 고정값 채택(사용자 확인, 2026-08-21) - 이 시편은 아직
+        # 진짜 덜박힘 양성 표본으로 검증된 값은 아니라 foam_panel_v1 때처럼 잠정 채택이며,
+        # 실측 데이터가 쌓이면 재검증 필요.
+        "protrusion_threshold_mm": 5.0,
+        # 아래 원 피팅 값은 홀 검출 1차 조정 대상 - 이 시편도 YOLO가 학습 안 된 패턴이라
+        # tread_v2와 마찬가지로 foam_panel_v1 기본값(2.5px/0.55)보다 원 피팅 노이즈가 클 수 있음.
+        # 실측으로는 이 시편 residual 1.5~2.25px/coverage 0.97~0.99로 전부 기본값 안에 들어와서
+        # 조정 불필요했음(None -> 전역 기본값 그대로).
+        "circle_fit_max_residual_px": None,
+        "circle_fit_min_coverage": None,
+        "stud_hole_min_diameter_mm": None,  # 위 tolerance_pct 방식으로 대체됨
+        "protrusion_search_radius_px": None,
+        "protrusion_exclude_radius_px": None,
     },
 }
 
@@ -490,6 +568,10 @@ def detect_stud_holes(color_img, depth_mm, intr, debug_label="stud_hole"):
     model = get_model()
     h_img, w_img = depth_mm.shape
     fx = intr["fx"]
+    profile = current_profile()
+    max_residual_px = profile.get("circle_fit_max_residual_px") or CIRCLE_FIT_MAX_RESIDUAL_PX
+    min_coverage = profile.get("circle_fit_min_coverage") or CIRCLE_FIT_MIN_COVERAGE
+    min_diameter_mm = profile.get("stud_hole_min_diameter_mm")
 
     normal, d0 = fit_panel_plane_3d(depth_mm, intr)
     if normal is None:
@@ -510,10 +592,18 @@ def detect_stud_holes(color_img, depth_mm, intr, debug_label="stud_hole"):
             mask = r.masks.data[i].cpu().numpy()
             mask_resized = cv2.resize(mask, (w_img, h_img), interpolation=cv2.INTER_NEAREST) > 0.5
 
-            fitted = rectify_and_fit_circle(mask_resized, H, fx, d0)
+            fitted = rectify_and_fit_circle(mask_resized, H, fx, d0,
+                                             min_coverage=min_coverage, max_residual_px=max_residual_px)
             if fitted is None:
                 if debug_label:
                     print(f"  [{debug_label}] 제외: 원 피팅 신뢰불가 (노이즈/과도한 잘림)")
+                continue
+
+            diam_mm = fitted["diameter_mm"]
+            if min_diameter_mm is not None and diam_mm < min_diameter_mm:
+                if debug_label:
+                    print(f"  [{debug_label}] 제외: 지름={diam_mm:.1f}mm이 하한({min_diameter_mm}mm) "
+                          f"미만 (다른 구멍들과 동떨어진 값 - 오탐 추정)")
                 continue
 
             inst = build_instance(mask_resized, cls_name, conf, depth_mm, fx, debug_label=debug_label)
@@ -523,7 +613,6 @@ def detect_stud_holes(color_img, depth_mm, intr, debug_label="stud_hole"):
             # 검사, ground_truth 오차 계산 등 build_instance의 나머지 로직은 그대로 재사용.
             inst["center_px"] = fitted["center_px"]
             inst["diameter_px"] = fitted["diameter_px"]
-            diam_mm = fitted["diameter_mm"]
             inst["diameter_mm"] = diam_mm
             gt = GROUND_TRUTH_MM.get(cls_name)
             if gt is not None:

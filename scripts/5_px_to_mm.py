@@ -43,24 +43,26 @@ def main():
 
     print(f"캡처 완료. fx={fx:.2f}px, depth range={depth_mm[depth_mm>0].min()}~{depth_mm.max()}mm")
 
-    instances = []
-
-    # stud_hole: YOLO 세그멘테이션 + 평면-호모그래피 보정 원 피팅
-    instances.extend(dc.detect_stud_holes(color_img, depth_mm, intr))
-
     # screw_head: 색상(명도) 기반 고전 CV - 은색 나사 vs 무광 검은 배경 대비가 커서 학습 불필요.
     # 타원으로 보이는(기울어진) 나사는 6번 '틀어짐' 케이스로 별도 표시 (버리지 않음).
     screw_dets = dc.detect_screw_heads_by_color(color_img)
+    screw_instances = []
     for det in screw_dets:
         inst = dc.build_instance(det["mask"], "screw_head", 1.0, depth_mm, fx,  # confidence 개념 없어 1.0 고정
                                   debug_label="screw_head",
                                   aspect_ratio=det["aspect_ratio"], insertion_status=det["status"])
         if inst:
-            instances.append(inst)
+            screw_instances.append(inst)
     n_tilted = sum(1 for d in screw_dets if d["status"] == "틀어짐")
     print(f"screw_head(색상 기반) 후보: {len(screw_dets)}개 (틀어짐 {n_tilted}개)")
 
-    instances = dc.deduplicate_instances(instances)
+    # stud_hole: YOLO 세그멘테이션 + 평면-호모그래피 보정 원 피팅. 나사가 앉아있는 자리가
+    # "빈 구멍"으로 중복 표시되는 걸 막기 위해 나사 위치 근처의 stud_hole은 제외(실측으로 발견된
+    # 문제 - 틀어진 나사는 구멍 테두리가 더 노출돼 stud_hole 모델이 같이 오탐하는 경향이 있음).
+    stud_holes = dc.detect_stud_holes(color_img, depth_mm, intr)
+    stud_holes = dc.suppress_occupied_holes(stud_holes, screw_instances, fx, debug_label="stud_hole")
+
+    instances = dc.deduplicate_instances(stud_holes + screw_instances)
 
     # 결과 저장
     json_path = os.path.join(RESULTS_DIR, "5_px_to_mm_result.json")
@@ -70,6 +72,7 @@ def main():
 
     # 시각화 (screw_head 중 틀어짐은 빨강으로 구분)
     vis = color_img.copy()
+    vh, vw = vis.shape[:2]
     for inst in instances:
         cx, cy = inst["center_px"]
         label = f"{inst['class']} {inst['diameter_mm']}mm"
@@ -82,9 +85,10 @@ def main():
                 label += f" [{inst['insertion_status']} ar={inst['aspect_ratio']}]"
         else:
             color = (255, 200, 0)
-        cv2.circle(vis, (int(cx), int(cy)), int(inst["diameter_px"] / 2), color, 2)
-        cv2.putText(vis, label, (int(cx) - 40, int(cy) - int(inst["diameter_px"] / 2) - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
+        r_px = int(inst["diameter_px"] / 2)
+        cv2.circle(vis, (int(cx), int(cy)), r_px, color, 2)
+        tx, ty = dc.clamp_text_origin(cx - 40, cy - r_px - 5, label, vw, vh, font_scale=0.4)
+        cv2.putText(vis, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
     png_path = os.path.join(RESULTS_DIR, "5_px_to_mm_result.png")
     cv2.imwrite(png_path, vis)
     print(f"시각화 저장: {png_path}")

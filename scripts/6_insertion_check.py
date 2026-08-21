@@ -34,7 +34,16 @@ MIN_PLANE_SAMPLES = 30
 
 # 덜박힘 임계값: 진짜 양성 샘플이 없어 절대치를 못 정함 - 정상 나사들의 protrusion_mm 분포를
 # 실행마다 파일에 누적하고, 표본이 쌓이면 평균+3표준편차를 잠정 기준으로 사용.
-BASELINE_PATH = os.path.join(RESULTS_DIR, "6_protrusion_baseline.json")
+#
+# 시편 프로파일별로 파일을 분리함 - 원래 단일 파일(6_protrusion_baseline.json)이었는데, 그러면
+# 다른 시편(tread_v2 등)으로 전환했을 때 서로 물리적으로 무관한 protrusion 분포가 같은 파일에
+# 섞여 통계가 무의미해짐(2026-08-20, 새 시편 도입하며 발견 - foam_panel_v1 실측치 53개가
+# 아무 프로파일에서나 그대로 쓰이고 있었음). center_offset_threshold_mm()과 같은 이유로
+# 함수로 둠(모듈 로드 시점이 아니라 호출 시점에 현재 프로파일을 반영해야 함).
+def baseline_path():
+    return os.path.join(RESULTS_DIR, f"6_protrusion_baseline_{dc.CURRENT_PROFILE_NAME}.json")
+
+
 MIN_BASELINE_N = 5
 BASELINE_STD_MULT = 3
 
@@ -109,24 +118,36 @@ def match_nearest_stud_hole(screw_center_px, stud_holes):
 
 
 def load_baseline():
-    if os.path.exists(BASELINE_PATH):
-        with open(BASELINE_PATH, "r", encoding="utf-8") as f:
+    path = baseline_path()
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
 
 def save_baseline(values):
-    with open(BASELINE_PATH, "w", encoding="utf-8") as f:
+    with open(baseline_path(), "w", encoding="utf-8") as f:
         json.dump(values, f, ensure_ascii=False, indent=2)
 
 
 def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
     """screw_dets(색상검출) + stud_holes(YOLO검출) + baseline(정상 protrusion 표본) ->
-    (results, baseline) - 5/6/7번 공용 삽입판정 코어. baseline은 정상 판정분이 append된
-    새 리스트로 반환(파일 저장은 호출자 책임 - 실시간 루프는 매 사이클 저장하지 않아도 되므로)."""
-    protrusion_threshold = None
-    if len(baseline) >= MIN_BASELINE_N:
+    (results, stud_holes_filtered, baseline, protrusion_threshold) - 5/6/7번 공용 삽입판정 코어.
+    stud_holes_filtered는 나사가 앉아있는 자리의 중복 stud_hole을 뺀 것(dc.suppress_occupied_holes)
+    - 호출부는 시각화 등에서 원본 stud_holes 대신 이걸 써야 "빈 구멍"과 "나사"가 같은 자리에
+    겹쳐 표시되는 걸 피할 수 있음. baseline은 정상 판정분이 append된 새 리스트로 반환
+    (파일 저장은 호출자 책임 - 실시간 루프는 매 사이클 저장하지 않아도 되므로)."""
+    # 덜박힘 임계값: 프로파일에 고정값이 있으면 그걸 우선 사용(현재 foam_panel_v1=5.0mm,
+    # 실측 누적 데이터의 빈 구간을 근거로 확정함 - detection_core.py 프로파일 주석 참고).
+    # 아직 기준선 데이터가 없는 새 시편은 프로파일값이 None이라 통계적 폴백(정상 표본
+    # 평균+3표준편차)으로 처리.
+    profile_threshold = dc.current_profile().get("protrusion_threshold_mm")
+    if profile_threshold is not None:
+        protrusion_threshold = profile_threshold
+    elif len(baseline) >= MIN_BASELINE_N:
         protrusion_threshold = float(np.mean(baseline) + BASELINE_STD_MULT * np.std(baseline))
+    else:
+        protrusion_threshold = None
     center_threshold = center_offset_threshold_mm()  # None이면(캘리퍼 값 없는 프로파일) 중심 판정 보류
     max_match = max_plausible_match_mm()
 
@@ -139,7 +160,12 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
         if inst is None:
             continue
 
-        local_depth = local_panel_depth_mm(mask, depth_mm, inst["center_px"], debug_label=label)
+        profile = dc.current_profile()
+        prot_search_radius = profile.get("protrusion_search_radius_px") or SEARCH_RADIUS_PX
+        prot_exclude_radius = profile.get("protrusion_exclude_radius_px") or EXCLUDE_RADIUS_PX
+        local_depth = local_panel_depth_mm(mask, depth_mm, inst["center_px"],
+                                            search_radius=prot_search_radius,
+                                            exclude_radius=prot_exclude_radius, debug_label=label)
         if local_depth is None:
             continue
         protrusion_mm = local_depth - inst["depth_mm"]  # 양수 = 나사가 패널보다 카메라 쪽으로 튀어나옴
@@ -150,6 +176,8 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
         matched_hole, dist_px = match_nearest_stud_hole(inst["center_px"], stud_holes)
         center_offset_mm = None
         match_rejected = False
+        inst["center_offset_mm"] = None  # 기본값 - 아래 분기 중 하나도 안 타는 경우(stud_holes가
+        # 아예 비어있어 dist_px가 None인 경우 등) 대비, 항상 키가 존재하도록 보장
         if dist_px is not None and max_match is not None:
             candidate_offset_mm = dist_px * inst["depth_mm"] / fx
             if candidate_offset_mm <= max_match:
@@ -185,7 +213,9 @@ def classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline):
             baseline.append(inst["protrusion_mm"])
 
         results.append(inst)
-    return results, baseline, protrusion_threshold
+
+    stud_holes_filtered = dc.suppress_occupied_holes(stud_holes, results, fx, debug_label="stud_hole")
+    return results, stud_holes_filtered, baseline, protrusion_threshold
 
 
 def main():
@@ -213,7 +243,8 @@ def main():
     print(f"stud_hole 검출: {len(stud_holes)}개")
 
     baseline = load_baseline()
-    results, baseline, protrusion_threshold = classify_insertion(screw_dets, stud_holes, depth_mm, fx, baseline)
+    results, stud_holes, baseline, protrusion_threshold = classify_insertion(
+        screw_dets, stud_holes, depth_mm, fx, baseline)
 
     for idx, inst in enumerate(results):
         label = f"screw#{idx}"
@@ -234,8 +265,12 @@ def main():
     print(f"결과 저장: {json_path}")
 
     if protrusion_threshold is not None:
-        print(f"\n덜박힘 임계값(잠정, 정상 표본 n={len(baseline)}): {protrusion_threshold:.2f}mm "
-              f"(평균+{BASELINE_STD_MULT}표준편차)")
+        if dc.current_profile().get("protrusion_threshold_mm") is not None:
+            print(f"\n덜박힘 임계값: {protrusion_threshold:.2f}mm (프로파일 고정값, "
+                  f"'{dc.CURRENT_PROFILE_NAME}' 누적 표본 근거 - detection_core.py 참고)")
+        else:
+            print(f"\n덜박힘 임계값(잠정, 정상 표본 n={len(baseline)}): {protrusion_threshold:.2f}mm "
+                  f"(평균+{BASELINE_STD_MULT}표준편차)")
     else:
         print(f"\n덜박힘 임계값 미확정 - 정상 표본 {len(baseline)}/{MIN_BASELINE_N}개 누적됨 "
               f"(계속 실행해 표본을 쌓으면 자동으로 확정됨)")
@@ -249,20 +284,22 @@ def main():
 
     # 시각화 - 최종 결과물: stud_hole(빈 구멍, 노랑) + screw_head(삽입 상태별 색) 한 장에 표시
     vis = color_img.copy()
+    vh, vw = vis.shape[:2]
     for hole in stud_holes:
         hx, hy = hole["center_px"]
         hr_px = int(hole["diameter_px"] / 2)
         cv2.circle(vis, (int(hx), int(hy)), hr_px, (0, 255, 255), 2)  # 노랑 = 빈 stud_hole
-        cv2.putText(vis, f"hole {hole['diameter_mm']}mm", (int(hx) - 35, int(hy) + hr_px + 15),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1, cv2.LINE_AA)
+        text = f"hole {hole['diameter_mm']}mm"
+        tx, ty = dc.clamp_text_origin(hx - 35, hy + hr_px + 15, text, vw, vh, font_scale=0.35)
+        cv2.putText(vis, text, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 255, 255), 1, cv2.LINE_AA)
     for inst in results:
         cx, cy = inst["center_px"]
         r_px = int(inst["diameter_px"] / 2)
         color = (0, 0, 255) if inst["final_status"] != "정상" else (0, 255, 0)
         cv2.circle(vis, (int(cx), int(cy)), r_px, color, 2)
         label = f"{inst['final_status']} prot={inst['protrusion_mm']}mm"
-        cv2.putText(vis, label, (int(cx) - 50, int(cy) - r_px - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
+        tx, ty = dc.clamp_text_origin(cx - 50, cy - r_px - 5, label, vw, vh, font_scale=0.4)
+        cv2.putText(vis, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
     png_path = os.path.join(RESULTS_DIR, "6_insertion_check_result.png")
     cv2.imwrite(png_path, vis)
     print(f"시각화 저장: {png_path}")

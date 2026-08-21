@@ -9,3 +9,5 @@ C:/Users/pc/Desktop/tire/dataset/images/specimen1_008.png
 C:/Users/pc/Desktop/tire/dataset/images/specimen2_001.png
 C:/Users/pc/Desktop/tire/dataset/images/specimen2_002.png
 C:/Users/pc/Desktop/tire/dataset/images/specimen2_003.png
+C:/Users/pc/Desktop/tire/dataset/images/specimen3_001.png
+C:/Users/pc/Desktop/tire/dataset/images/specimen3_002.png

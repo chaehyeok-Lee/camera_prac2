@@ -3,68 +3,71 @@
     "class": "screw_head",
     "confidence": 1.0,
     "center_px": [
-      690.5,
-      225.5
+      358.0,
+      210.6
     ],
-    "diameter_px": 18.3,
-    "depth_mm": 306.0,
+    "diameter_px": 21.97,
+    "depth_mm": 296.0,
     "depth_source": "mask",
-    "diameter_mm": 6.187,
-    "ground_truth_mm": 6.0,
-    "error_mm": 0.187,
-    "error_pct": 3.1,
-    "aspect_ratio": 1.05,
-    "tilt_status": "정상",
-    "local_panel_depth_mm": 315.4,
-    "protrusion_mm": 9.41,
-    "center_offset_mm": null,
-    "final_status": "정상",
-    "tilt_reasons": []
-  },
-  {
-    "class": "screw_head",
-    "confidence": 1.0,
-    "center_px": [
-      851.1,
-      296.4
-    ],
-    "diameter_px": 18.4,
-    "depth_mm": 307.0,
-    "depth_source": "mask",
-    "diameter_mm": 6.242,
-    "ground_truth_mm": 6.0,
-    "error_mm": 0.242,
-    "error_pct": 4.0,
-    "aspect_ratio": 1.74,
+    "diameter_mm": 7.184,
+    "ground_truth_mm": 10.0,
+    "error_mm": -2.816,
+    "error_pct": -28.2,
+    "aspect_ratio": 1.73,
     "tilt_status": "틀어짐",
-    "local_panel_depth_mm": 309.6,
-    "protrusion_mm": 2.59,
+    "local_panel_depth_mm": 305.1,
+    "protrusion_mm": 9.07,
     "center_offset_mm": null,
     "final_status": "틀어짐",
     "tilt_reasons": [
       "각도"
-    ]
+    ],
+    "match_rejected": false
   },
   {
     "class": "screw_head",
     "confidence": 1.0,
     "center_px": [
-      656.0,
-      568.2
+      599.1,
+      352.4
     ],
-    "diameter_px": 15.84,
-    "depth_mm": 310.0,
+    "diameter_px": 23.04,
+    "depth_mm": 296.0,
     "depth_source": "mask",
-    "diameter_mm": 5.424,
-    "ground_truth_mm": 6.0,
-    "error_mm": -0.576,
-    "error_pct": -9.6,
-    "aspect_ratio": 1.04,
+    "diameter_mm": 7.536,
+    "ground_truth_mm": 10.0,
+    "error_mm": -2.464,
+    "error_pct": -24.6,
+    "aspect_ratio": 1.28,
     "tilt_status": "정상",
-    "local_panel_depth_mm": 312.9,
-    "protrusion_mm": 2.91,
+    "local_panel_depth_mm": 300.7,
+    "protrusion_mm": 4.67,
     "center_offset_mm": null,
     "final_status": "정상",
-    "tilt_reasons": []
+    "tilt_reasons": [],
+    "match_rejected": false
+  },
+  {
+    "class": "screw_head",
+    "confidence": 1.0,
+    "center_px": [
+      885.9,
+      506.6
+    ],
+    "diameter_px": 24.23,
+    "depth_mm": 287.0,
+    "depth_source": "mask",
+    "diameter_mm": 7.682,
+    "ground_truth_mm": 10.0,
+    "error_mm": -2.318,
+    "error_pct": -23.2,
+    "aspect_ratio": 1.05,
+    "tilt_status": "정상",
+    "local_panel_depth_mm": 290.4,
+    "protrusion_mm": 3.39,
+    "center_offset_mm": null,
+    "final_status": "정상",
+    "tilt_reasons": [],
+    "match_rejected": false
   }
 ]
